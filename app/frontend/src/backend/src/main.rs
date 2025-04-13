@@ -5,6 +5,7 @@ use axum::{
 };
 use serde::Deserialize;
 use tower_http::cors::{Any, CorsLayer};
+use sea_orm::{Database, DbErr};
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -22,7 +23,11 @@ async fn main() -> Result<(), std::io::Error> {
         .await
         .unwrap();
     println!("the server is running at port 3000");
+    let database_url = "postgresql://neondb_owner:npg_Hnlp2FJc9guM@ep-purple-bonus-a5mylor6-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require";
+    let db = Database::connect(database_url).await;
+    println!("Database connected successfully!");
     axum::serve(listener, app).await
+
 }
 
 async fn root() -> &'static str {
