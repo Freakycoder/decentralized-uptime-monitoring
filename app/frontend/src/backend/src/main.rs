@@ -6,6 +6,8 @@ use axum::{
 use serde::Deserialize;
 use tower_http::cors::{Any, CorsLayer};
 use sea_orm::{Database, DbErr};
+pub mod entities;
+
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
