@@ -7,6 +7,7 @@ use serde::Deserialize;
 use tower_http::cors::{Any, CorsLayer};
 use sea_orm::{Database, DbErr};
 pub mod entities;
+pub mod handlers;
 
 
 #[tokio::main]
