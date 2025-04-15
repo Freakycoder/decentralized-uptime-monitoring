@@ -21,8 +21,8 @@ pub enum Relation {
 
 impl ActiveModelBehavior for ActiveModel {}
 
-impl Related<crate::entities::validator::Entity> for crate::entities::user::Entity {
+impl Related<super::validator::Entity> for Entity {
     fn to() -> RelationDef {
-        crate::entities::validator::Relation::Users.def().rev()
+        super::validator::Relation::Users.def().rev()
     }
 }

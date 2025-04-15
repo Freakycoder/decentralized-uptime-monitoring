@@ -1,6 +1,6 @@
 use sea_orm::entity::prelude::*;
 
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)] 
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel)] 
 #[sea_orm(table_name = "Validators")]
 pub struct Model {
     #[sea_orm(primary_key)]
@@ -8,6 +8,8 @@ pub struct Model {
     pub user_id: Uuid,
     #[sea_orm(unique)]
     pub wallet_address : String,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
     #[sea_orm(default_value = "CURRENT_TIMESTAMP")]
     pub created_at : Option<DateTimeWithTimeZone>
 }
