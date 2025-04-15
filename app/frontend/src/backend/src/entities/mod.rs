@@ -1,5 +1,5 @@
 pub mod user;
-pub mod vaildator;
+pub mod validator;
 pub mod device;
 pub mod network_measurement;
 pub mod computing_contribution;
