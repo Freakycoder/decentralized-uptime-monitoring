@@ -9,6 +9,11 @@ pub fn user_router() -> Router{
     .route("/signup", get(signup))
 }
 
-async fn signup() -> &'static str{
-    "hello from user route"
+async fn signup(Json(user_data) : Json<UserInput>){
+    let username = user_data.username;
+    let email = user_data.email;
+    let password = user_data.password;
+
+    
+
 }
