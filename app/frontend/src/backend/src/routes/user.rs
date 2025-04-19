@@ -15,7 +15,9 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, Qu
 use jsonwebtoken::{EncodingKey, Header, encode};
 
 pub fn user_router() -> Router<DatabaseConnection> {
-    Router::new().route("/signup", post(signup))
+    Router::new()
+        .route("/signup", post(signup))
+        .route("/signin", post(signin))
 }
 
 #[axum::debug_handler]
@@ -68,6 +70,41 @@ async fn signup(
             message: format!("Failed to create new user : {}", err),
             token: None,
         }),
+    }
+}
+
+async fn signin(
+    State(db): State<DatabaseConnection>,
+    Json(user_data): Json<UserInput>,
+) -> Json<SignUpResponse> {
+
+    let email = user_data.email;
+   
+    let old_user = user::Entity::find()
+        .filter(user::Column::Email.eq(&email))
+        .one(&db)
+        .await;
+
+    if let Err(db_err) = old_user {
+        return Json(SignUpResponse {
+            status_code: 500,
+            message: format!("Database error occured : {}", db_err),
+            token: None,
+        });
+    }
+
+    if let Some(existing_user) = old_user.unwrap() {
+        return Json(SignUpResponse {
+            status_code: 200,
+            message: format!("User found"),
+            token: Some(generate_jwt(&existing_user.id.to_string())),
+        });
+    } else {
+        return Json(SignUpResponse {
+            status_code: 404,
+            message: format!("User not found"),
+            token: None,
+        });
     }
 }
 
