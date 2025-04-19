@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-axum = "0.7.2"
+axum = { version = "0.8.3", features = ["macros"] }
 # Async runtime
 tokio = { version = "1.34.0", features = ["full"] }
 # Serialization/deserialization
@@ -17,3 +17,6 @@ log = "0.4"
 env_logger = "0.10"
 sea-orm = { version = "0.12", features = ["sqlx-mysql", "runtime-tokio-native-tls", "macros"] }
 bcrypt = "0.17.0"
+jsonwebtoken = "9.3.1"
+chrono = "0.4.40"
+
