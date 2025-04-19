@@ -16,7 +16,7 @@ async fn main() -> Result<(), std::io::Error> {
     let app = Router::new()
         .route("/", get(sayhello))
         .nest("/user", routes::user::user_router())
-        .nest("/website", routes::website_monitoring::website_router() )
+        // .nest("/website", routes::website_monitoring::website_router() )
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)
