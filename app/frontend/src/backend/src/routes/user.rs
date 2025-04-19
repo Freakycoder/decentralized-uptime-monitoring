@@ -1,19 +1,108 @@
-use axum::{
-    extract::Query, routing::get, Json, Router
+use crate::{
+    entities::user,
+    types::user::{Claims, SignUpResponse, UserInput},
 };
-use sea_orm::{Database, DbErr};
-use crate::types::user::UserInput;
+use axum::{
+    Router,
+    extract::{Json, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::post,
+};
 
-pub fn user_router() -> Router{
-    Router::new()
-    .route("/signup", get(signup))
+use chrono::{Duration, Utc};
+
+use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
+
+use jsonwebtoken::{EncodingKey, Header, encode};
+
+pub fn user_router() -> Router<DatabaseConnection> {
+    Router::new().route("/signup", post(signup))
 }
 
-async fn signup(Json(user_data) : Json<UserInput>){
+async fn signup(
+    Json(user_data): Json<UserInput>,
+    State(db): State<DatabaseConnection>,
+) -> impl IntoResponse {
     let username = user_data.username;
     let email = user_data.email;
     let password = user_data.password;
 
-    
+    let old_user = user::Entity::find()
+        .filter(user::Column::Email.eq(&email))
+        .one(&db)
+        .await;
 
+    if let Err(db_err) = old_user {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(SignUpResponse {
+                status_code: 500,
+                message: format!("Database error occured : {}", db_err),
+                token: None,
+            }),
+        );
+    }
+
+    if let Some(_) = old_user.unwrap() {
+        return (
+            StatusCode::CONFLICT,
+            Json(SignUpResponse {
+                status_code: 409, //conflict status code
+                message: format!("User already exist, please SignIn"),
+                token: None,
+            }),
+        );
+    }
+
+    let new_user: user::ActiveModel = user::ActiveModel {
+        username: Set(username),
+        email: Set(email),
+        password_hash: Set(create_hash(password)),
+        ..Default::default()
+    }; // this part is just creating a record to insert into db
+
+    match new_user.insert(&db).await {
+        // in 'new_user.insert(&db).await' we actually insert the record into db
+        Ok(user) => (
+            StatusCode::CREATED,
+            Json(SignUpResponse {
+                status_code: 200,
+                message: user.id.to_string(),
+                token: Some(generate_jwt(&user.id.to_string())),
+            }),
+        ),
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(SignUpResponse {
+                status_code: 404,
+                message: format!("Failed to create new user : {}", err),
+                token: None,
+            }),
+        ),
+    }
+}
+
+pub fn create_hash(unhashed_pass: String) -> String {
+    let hashed_pass = bcrypt::hash(unhashed_pass, bcrypt::DEFAULT_COST).unwrap_or_default();
+    hashed_pass
+}
+
+pub fn generate_jwt(user_id: &str) -> String {
+    let expiration = Utc::now()
+        .checked_add_signed(Duration::hours(24))
+        .expect("valid timestamp")
+        .timestamp() as usize;
+
+    let claims = Claims {
+        sub: user_id.to_owned(),
+        exp: expiration,
+    };
+    let token = encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret("secret".as_ref()),
+    )
+    .unwrap();
+    token
 }
