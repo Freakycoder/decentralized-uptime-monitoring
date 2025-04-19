@@ -5,8 +5,6 @@ use crate::{
 use axum::{
     Router,
     extract::{Json, State},
-    http::StatusCode,
-    response::IntoResponse,
     routing::post,
 };
 
@@ -20,10 +18,11 @@ pub fn user_router() -> Router<DatabaseConnection> {
     Router::new().route("/signup", post(signup))
 }
 
+#[axum::debug_handler]
 async fn signup(
-    Json(user_data): Json<UserInput>,
     State(db): State<DatabaseConnection>,
-) -> impl IntoResponse {
+    Json(user_data): Json<UserInput>,
+) -> Json<SignUpResponse> {
     let username = user_data.username;
     let email = user_data.email;
     let password = user_data.password;
@@ -34,25 +33,19 @@ async fn signup(
         .await;
 
     if let Err(db_err) = old_user {
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(SignUpResponse {
-                status_code: 500,
-                message: format!("Database error occured : {}", db_err),
-                token: None,
-            }),
-        );
+        return Json(SignUpResponse {
+            status_code: 500,
+            message: format!("Database error occured : {}", db_err),
+            token: None,
+        });
     }
 
     if let Some(_) = old_user.unwrap() {
-        return (
-            StatusCode::CONFLICT,
-            Json(SignUpResponse {
-                status_code: 409, //conflict status code
-                message: format!("User already exist, please SignIn"),
-                token: None,
-            }),
-        );
+        return Json(SignUpResponse {
+            status_code: 409, //conflict status code
+            message: format!("User already exist, please SignIn"),
+            token: None,
+        });
     }
 
     let new_user: user::ActiveModel = user::ActiveModel {
@@ -64,22 +57,17 @@ async fn signup(
 
     match new_user.insert(&db).await {
         // in 'new_user.insert(&db).await' we actually insert the record into db
-        Ok(user) => (
-            StatusCode::CREATED,
-            Json(SignUpResponse {
-                status_code: 200,
-                message: user.id.to_string(),
-                token: Some(generate_jwt(&user.id.to_string())),
-            }),
-        ),
-        Err(err) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(SignUpResponse {
-                status_code: 404,
-                message: format!("Failed to create new user : {}", err),
-                token: None,
-            }),
-        ),
+        Ok(user) => Json(SignUpResponse {
+            status_code: 200,
+            message: user.id.to_string(),
+            token: Some(generate_jwt(&user.id.to_string())),
+        }),
+
+        Err(err) => Json(SignUpResponse {
+            status_code: 404,
+            message: format!("Failed to create new user : {}", err),
+            token: None,
+        }),
     }
 }
 
