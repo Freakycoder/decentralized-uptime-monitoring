@@ -1,0 +1,40 @@
+import { ReactNode } from 'react';
+import { motion } from 'framer-motion';
+import Sidebar from './SideBar';
+import Header from './Header';
+import { cn } from '../../lib/utils';
+import { fadeIn, slideUp } from '../../lib/framer-variants';
+
+interface LayoutProps {
+  children: ReactNode;
+  title: string;
+}
+
+const Layout: React.FC<LayoutProps> = ({ children, title }) => {
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <Sidebar />
+      <div className="flex flex-col min-h-screen">
+        <Header title={title} />
+        <motion.main
+          variants={slideUp}
+          initial="hidden"
+          animate="visible"
+          className={cn(
+            "flex-1 p-4 md:p-6",
+            "ml-0 md:ml-64" // Adjust for sidebar
+          )}
+        >
+          <motion.div 
+            variants={fadeIn}
+            className="container mx-auto"
+          >
+            {children}
+          </motion.div>
+        </motion.main>
+      </div>
+    </div>
+  );
+};
+
+export default Layout;
