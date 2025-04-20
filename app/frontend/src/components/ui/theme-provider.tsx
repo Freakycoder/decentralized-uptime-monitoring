@@ -26,10 +26,19 @@ export function ThemeProvider({
   storageKey = "ui-theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
-  )
+  // Start with defaultTheme and update after checking localStorage
+  const [theme, setTheme] = useState<Theme>(defaultTheme)
+  
+  // Effect to run only on client-side to get theme from localStorage
+  useEffect(() => {
+    // Now safely access localStorage since we're on the client
+    const storedTheme = localStorage.getItem(storageKey) as Theme | null
+    if (storedTheme) {
+      setTheme(storedTheme)
+    }
+  }, [storageKey])
 
+  // Effect to update document class and localStorage when theme changes
   useEffect(() => {
     const root = window.document.documentElement
 
@@ -46,12 +55,14 @@ export function ThemeProvider({
     }
 
     root.classList.add(theme)
-  }, [theme])
+    
+    // Update localStorage with the current theme
+    localStorage.setItem(storageKey, theme)
+  }, [theme, storageKey])
 
   const value = {
     theme,
     setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme)
       setTheme(theme)
     },
   }
