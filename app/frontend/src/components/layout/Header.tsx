@@ -1,6 +1,7 @@
+// src/components/layout/Header.tsx
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useTheme } from '../../components/ui/theme-provider';
+import { useTheme } from 'next-themes';
 import { Moon, Sun, Bell } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
@@ -23,21 +24,25 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
     setTheme(theme === 'light' ? 'dark' : 'light');
   };
 
-  // Only render on client-side to avoid hydration mismatch
-  if (!mounted) {
-    return null;
-  }
+  // Only render theme toggle on client-side to avoid hydration mismatch
+  const themeToggle = mounted ? (
+    <Button variant="outline" size="icon" onClick={toggleTheme}>
+      {theme === 'light' ? (
+        <Moon className="h-5 w-5" />
+      ) : (
+        <Sun className="h-5 w-5" />
+      )}
+    </Button>
+  ) : (
+    <div className="h-10 w-10"></div> // Placeholder of same size
+  );
 
   return (
     <motion.header
       variants={fadeIn}
       initial="hidden"
       animate="visible"
-      className={cn(
-        "sticky top-0 z-10 h-16 bg-card border-b border-border shadow-sm",
-        "flex justify-between items-center px-4 md:px-6",
-        "ml-0 md:ml-64" // Adjust for sidebar
-      )}
+      className="sticky top-0 z-10 h-16 bg-card border-b border-border shadow-sm flex justify-between items-center px-4 md:px-6"
     >
       <h1 className="text-xl font-semibold">{title}</h1>
       
@@ -47,13 +52,7 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
           <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive" />
         </Button>
         
-        <Button variant="outline" size="icon" onClick={toggleTheme}>
-          {theme === 'light' ? (
-            <Moon className="h-5 w-5" />
-          ) : (
-            <Sun className="h-5 w-5" />
-          )}
-        </Button>
+        {themeToggle}
       </div>
     </motion.header>
   );
