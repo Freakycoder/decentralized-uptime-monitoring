@@ -5,11 +5,14 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: Uuid,
-    pub user_id: Uuid,
+    #[sea_orm(unique)]
+    pub user_id: String,
     #[sea_orm(unique)]
     pub wallet_address : String,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
+    #[sea_orm(unique)]
+    pub device_id : String,
     #[sea_orm(default_value = "CURRENT_TIMESTAMP")]
     pub created_at : Option<DateTimeWithTimeZone>
 }
