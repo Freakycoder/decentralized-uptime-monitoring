@@ -50,7 +50,7 @@ async fn signup(
         });
     }
 
-    let new_user: user::ActiveModel = user::ActiveModel {
+    let new_user= user::ActiveModel {
         username: Set(username),
         email: Set(email),
         password_hash: Set(create_hash(password)),
