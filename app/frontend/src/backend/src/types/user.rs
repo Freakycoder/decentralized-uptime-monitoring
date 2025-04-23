@@ -19,3 +19,26 @@ pub struct Claims {
    pub sub: String,
    pub exp: usize,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ValidatorInput{
+    pub user_id: String,
+    pub wallet_address : String,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub device_id : String
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VerifyValidatorResponse{
+    pub status_code : u32,
+    pub message : String
+}
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VerifySignatureRequest{
+    pub message : String,
+    pub signature : String,
+    pub public_key : String
+}
