@@ -8,6 +8,7 @@ interface ContributionStatsProps {
   stats: UserStats;
 }
 
+
 const ContributionStats: React.FC<ContributionStatsProps> = ({ stats }) => {
   return (
     <motion.div
