@@ -10,6 +10,7 @@ import { staggerContainer, slideUp } from '../lib/framer-variants';
 const Home = () => {
   const [mounted, setMounted] = useState(false);
 
+  
   // After mounting, we can safely use client-side APIs
   useEffect(() => {
     setMounted(true);
