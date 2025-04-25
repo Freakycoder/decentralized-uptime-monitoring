@@ -24,6 +24,7 @@ const ContributionMethodPage = () => {
   const [method, setMethod] = useState<ContributionMethod | null>(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  
 
   // Set mounted state to handle client-side rendering
   useEffect(() => {
