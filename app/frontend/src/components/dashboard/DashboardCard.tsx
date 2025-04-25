@@ -10,6 +10,7 @@ interface DashboardCardProps {
   method: ContributionMethod;
 }
 
+
 const DashboardCard: React.FC<DashboardCardProps> = ({ method }) => {
   return (
     <Link href={`/contribution/${method.id}`} className="block h-full">
