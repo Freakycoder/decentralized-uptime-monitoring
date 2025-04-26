@@ -7,6 +7,7 @@ import { useTheme } from '../../components/ui/theme-provider';
 import { cn, getContributionIcon } from '../../lib/utils';
 import { sidebarAnimation, sidebarItemAnimation, fadeIn } from '../../lib/framer-variants';
 
+
 const Sidebar = () => {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
