@@ -6,6 +6,7 @@ import { WebsiteMonitorData } from '../../types';
 import { fadeIn, slideUp, staggerContainer } from '../../lib/framer-variants';
 import { getStatusColor, formatDate } from '../../lib/utils';
 
+
 // Mock data for website monitoring
 const mockWebsiteData: WebsiteMonitorData[] = [
   {
