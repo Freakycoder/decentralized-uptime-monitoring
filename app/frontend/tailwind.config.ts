@@ -51,9 +51,9 @@ const config: Config = {
           foreground: "var(--card-foreground)",
         },
       },
-      // Rest of your configuration...
     },
   },
+  plugins: [],
 };
 
 export default config;
