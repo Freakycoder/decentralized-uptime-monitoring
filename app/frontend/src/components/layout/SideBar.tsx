@@ -1,3 +1,4 @@
+// src/components/layout/SideBar.tsx
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -7,16 +8,26 @@ import { useTheme } from '../../components/ui/theme-provider';
 import { cn, getContributionIcon } from '../../lib/utils';
 import { sidebarAnimation, sidebarItemAnimation, fadeIn } from '../../lib/framer-variants';
 
-
 const Sidebar = () => {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   // After mounting, we can safely access window
   useEffect(() => {
     setMounted(true);
+    
+    // Check if we're on a desktop screen
+    const checkIsDesktop = () => {
+      setIsDesktop(window.innerWidth >= 768); // 768px is the md breakpoint
+    };
+    
+    checkIsDesktop(); // Initial check
+    window.addEventListener('resize', checkIsDesktop);
+    
+    return () => window.removeEventListener('resize', checkIsDesktop);
   }, []);
 
   const toggleMobile = () => {
@@ -65,12 +76,9 @@ const Sidebar = () => {
       {/* Sidebar */}
       <motion.aside
         variants={sidebarAnimation}
-        initial="closed"
-        animate={mobileOpen ? "open" : "closed"}
-        className={cn(
-          "fixed left-0 top-0 h-full w-64 bg-card border-r border-border shadow-lg z-40 flex flex-col",
-          "md:translate-x-0 transform transition-transform duration-300 ease-in-out"
-        )}
+        initial={isDesktop ? "open" : "closed"}
+        animate={isDesktop || mobileOpen ? "open" : "closed"}
+        className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border shadow-lg z-40 flex flex-col"
       >
         {/* Logo */}
         <div className="p-4 flex items-center gap-2 border-b border-border mb-4">
