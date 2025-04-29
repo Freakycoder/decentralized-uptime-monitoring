@@ -88,6 +88,7 @@ async fn handle_connection(
         }
     };
 
+    
     let signature_bytes = match Signature::from_str(&verification_data.signature) {
         Ok(sig) => sig,
         Err(parse_error) => {
