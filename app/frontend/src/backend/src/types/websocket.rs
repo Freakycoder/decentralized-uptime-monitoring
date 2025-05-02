@@ -55,5 +55,5 @@ pub struct Location {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ServerMessage {
-    url: String,
+    pub url: String,
 }
