@@ -1,4 +1,6 @@
-use crate::types::websocket::{ServerMessage, ValidatorConnection, ValidatorMessage};
+use crate::types::websocket::{
+    ServerMessage, StatusDetails, ValidatorConnection, ValidatorMessage, WebsiteStatus,
+};
 use axum::extract::ws::{Message, WebSocket};
 use chrono::{FixedOffset, Utc};
 use dashmap::DashMap;
@@ -18,7 +20,7 @@ impl WebSocketManager {
         let (broadcast_sender, _) = broadcast::channel(1000); // tx is the one who sends message and rx are the one who gets the message when subscribed using (tx.subscribe())
         Self {
             connections: Arc::new(DashMap::new()),
-            broadcast_tx : broadcast_sender,
+            broadcast_tx: broadcast_sender,
         }
     }
 
@@ -77,6 +79,9 @@ impl WebSocketManager {
                                         response_time,
                                         timestamp,
                                         details,
+                                        validator_id,
+                                        latitude,
+                                        longitude,
                                     )
                                     .await
                                     {
@@ -114,17 +119,20 @@ impl WebSocketManager {
         // Listening for broadcasts
         let broadcast_task = tokio::spawn(async move {
             let mut broadcast_subscriber = broadcast_sender.subscribe(); // here we have subscribed for messages sent by sender
-            while let Ok(server_msg) = broadcast_subscriber.recv().await { // here we're awaiting for the messages to come
-                if let Ok(json) = serde_json::to_string(&server_msg) { // here we're converting the json to string to sent over websocket
-                    let msg_sent = mpsc_tx.send(Message::Text(json)).await; // here we're pushing the string message onto mpsc channel, so that it gets recieved by ws_sender
-                    if msg_sent.is_err() { // if any error in sending the message to mpsc channel of that validator then break the connection.
+            while let Ok(server_msg) = broadcast_subscriber.recv().await {
+                // here we're awaiting for the messages to come
+                if let Ok(json) = serde_json::to_string(&server_msg) {
+                    // here we're converting the json to string to sent over websocket
+                    let msg_sent = mpsc_tx.send(Message::Text(json.into())).await; // here we're pushing the string message onto mpsc channel, so that it gets recieved by ws_sender
+                    if msg_sent.is_err() {
+                        // if any error in sending the message to mpsc channel of that validator then break the connection.
                         break;
                     }
                 }
             }
         });
 
-        // Wait until any of the tasks complete
+        // Essentially you're spawning (Creating) multiple async tasks, the moment one task fails or completes succesfully we instantly close the other 2 tasks.
         tokio::select! {
             _ = receive_task => {},
             _ = send_task => {},
@@ -134,24 +142,17 @@ impl WebSocketManager {
         self.connections.remove(&connection_id);
     }
 
-    
-
-    pub async fn handle_api_connection(&self, socket: WebSocket) { 
+    pub async fn handle_api_connection(&self, socket: WebSocket) {
         println!("API connected");
 
-        let (mut ws_sender, mut ws_receiver) = socket.split();
+        let (_, mut ws_receiver) = socket.split();
 
         while let Some(result) = ws_receiver.next().await {
             match result {
                 Ok(Message::Text(text)) => {
-                    if let Ok(api_msg) = serde_json::from_str::<ApiMessage>(&text) {
-                        match api_msg {
-                            ApiMessage::UrlsToPing { urls } => {
-                                println!("Received URLs from API to broadcast.");
-                                let server_msg = ServerMessage::PingUrls { urls };
-                                let _ = self.broadcast_tx.send(server_msg); // here we're broadcasting the message, whoever is subscribed recieves the message.
-                            }
-                        }
+                    if let Ok(api_msg) = serde_json::from_str::<ServerMessage>(&text) {
+                        println!("Received URLs from API to broadcast.");
+                        let _ = self.broadcast_tx.send(api_msg);
                     }
                 }
                 Ok(Message::Close(_)) => {
@@ -167,12 +168,16 @@ impl WebSocketManager {
         }
     }
 
+    // here we're using the reqwest library which is exatcly the same as axios.
     async fn forward_status_to_api(
         url: String,
-        status: String,
-        response_time: u64,
+        status: WebsiteStatus,
+        response_time: u32,
         timestamp: String,
-        details: Option<String>,
+        details: Option<StatusDetails>,
+        validator_id: String,
+        latitude: f64,
+        longitude: f64,
     ) -> Result<(), reqwest::Error> {
         let api_url = "http://your-api-server.com/website-status"; // replace with your actual API endpoint
 
@@ -185,6 +190,9 @@ impl WebSocketManager {
                 "response_time": response_time,
                 "timestamp": timestamp,
                 "details": details,
+                "validator_id" : validator_id,
+                "latitude" : latitude,
+                "longitude" : longitude
             }))
             .send()
             .await?;
