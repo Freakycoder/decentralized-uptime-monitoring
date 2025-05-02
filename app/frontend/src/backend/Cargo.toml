@@ -24,3 +24,4 @@ bs58 = "0.5.1"
 dashmap = "6.1.0"
 uuid = { version = "1.16.0", features = ["v4", "serde"] }
 futures-util = "0.3.31"
+reqwest = { version = "0.12.15" , features = ["json"]}
