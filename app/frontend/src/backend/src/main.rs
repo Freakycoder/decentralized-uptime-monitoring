@@ -1,9 +1,13 @@
+use std::sync::Arc;
+
 use axum::{Router, routing::get};
 use sea_orm::Database;
 use tower_http::cors::{Any, CorsLayer};
+use websocket::manager::WebSocketManager;
 pub mod entities;
 pub mod routes;
 pub mod types;
+pub mod websocket;
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -13,10 +17,12 @@ async fn main() -> Result<(), std::io::Error> {
         .expect("failed to connect");
     println!("Database connected successfully!");
 
+    let ws_manager = Arc::new(WebSocketManager::new()); // the WebSocketManager::new() is invoking the constructor present in websocket class, which initializes the connectin and broadcast
+
     let app = Router::new()
         .route("/", get(sayhello))
         .nest("/user", routes::user::user_router().with_state(db))
-        // .nest("/website", routes::website_monitoring::website_router() )
+        .nest("/ws", routes::websocket::websocket_router(ws_manager))
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)
