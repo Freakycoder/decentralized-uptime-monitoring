@@ -1,8 +1,7 @@
 use axum::{
-    extract::Query, routing::get, Json, Router
+ routing::get, Router
 };
-use sea_orm::{Database, DbErr};
-use crate::types::user::UserInput;
+
 
 pub fn website_router() -> Router{
     Router::new()
