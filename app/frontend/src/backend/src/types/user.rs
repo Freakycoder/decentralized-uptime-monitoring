@@ -14,6 +14,7 @@ pub struct SignUpResponse{
     pub token : Option<String>
 }
 
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
    pub sub: String,
