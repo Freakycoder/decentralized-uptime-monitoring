@@ -40,3 +40,4 @@ async fn main() -> Result<(), std::io::Error> {
 async fn sayhello() -> &'static str {
     "greeting from root route"
 }
+
