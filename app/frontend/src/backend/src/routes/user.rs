@@ -20,6 +20,7 @@ pub fn user_router() -> Router<DatabaseConnection> {
         .route("/signin", post(signin))
 }
 
+
 #[axum::debug_handler]
 async fn signup(
     State(db): State<DatabaseConnection>,
