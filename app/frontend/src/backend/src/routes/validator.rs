@@ -16,6 +16,7 @@ pub fn validator_router() -> Router<DatabaseConnection> {
 }
 
 
+
 #[debug_handler]
 async fn verify_validator(
     State(db): State<DatabaseConnection>,
