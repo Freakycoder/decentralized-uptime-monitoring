@@ -1,6 +1,5 @@
 use sea_orm::entity::prelude::*;
 
-
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)] 
 #[sea_orm(table_name = "Users")]
 pub struct Model {
@@ -17,7 +16,9 @@ pub struct Model {
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(has_one = "super::validator::Entity")]
-    Validators
+    Validators,
+    #[sea_orm(has_one = "super::website_register::Entity")]
+    WebsiteRegister
 }
 
 impl ActiveModelBehavior for ActiveModel {}
