@@ -117,39 +117,7 @@ const WebsiteMonitor: React.FC = () => {
       animate="visible"
       className="space-y-8"
     >
-      {/* Add new website form */}
-      <motion.div variants={fadeIn}>
-        <Card className="border-purple-500/20 bg-zinc-900">
-          <CardHeader className="border-b border-zinc-800">
-            <CardTitle className="text-purple-300">Add Website to Monitor</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="website-url" className="text-sm font-medium text-purple-200">
-                  Website URL
-                </label>
-                <Input
-                  id="website-url"
-                  type="url"
-                  placeholder="https://example.com"
-                  value={newWebsiteUrl}
-                  onChange={(e) => setNewWebsiteUrl(e.target.value)}
-                  className="bg-zinc-800 border-zinc-700 focus:border-purple-500 text-zinc-100"
-                  required
-                />
-              </div>
-              <Button 
-                type="submit" 
-                disabled={isLoading}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
-              >
-                {isLoading ? 'Adding...' : 'Add Website'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </motion.div>
+  
 
       {/* Websites monitoring */}
       <motion.div variants={slideUp}>
