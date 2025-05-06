@@ -119,13 +119,13 @@ const Sidebar = () => {
           </div>
           <nav className="space-y-1">
             {contributionMethods.map((method) => (
-              <Link key={method.id} href={`/contribution/${method.id}`} passHref>
+              <Link key={method.id} href={`/${method.id}`} passHref>
                 <motion.a
                   variants={sidebarItemAnimation}
                   whileHover={{ x: 4 }}
                   className={cn(
                     "flex items-center gap-3 px-4 py-3 rounded-md font-medium transition-colors",
-                    isActive(`/contribution/${method.id}`)
+                    isActive(`/${method.id}`)
                       ? "bg-primary/10 text-primary"
                       : "text-foreground hover:bg-accent"
                   )}

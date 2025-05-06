@@ -13,7 +13,7 @@ interface DashboardCardProps {
 
 const DashboardCard: React.FC<DashboardCardProps> = ({ method }) => {
   return (
-    <Link href={`/contribution/${method.id}`} className="block h-full">
+    <Link href={`/${method.id}`} className="block h-full">
       <motion.div
         initial="initial"
         whileHover="hover"
