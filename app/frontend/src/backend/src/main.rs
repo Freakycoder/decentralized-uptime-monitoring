@@ -21,8 +21,9 @@ async fn main() -> Result<(), std::io::Error> {
 
     let app = Router::new()
         .route("/", get(sayhello))
-        .nest("/user", routes::user::user_router().with_state(db))
+        .nest("/user", routes::user::user_router().with_state(db.clone()))
         .nest("/ws", routes::websocket::websocket_router(ws_manager))
+        .nest("/website-monitor", routes::website_monitoring::website_router().with_state(db.clone()))
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)

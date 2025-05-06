@@ -144,34 +144,19 @@ const Sidebar = () => {
             Account
           </div>
           <nav className="space-y-1">
-            <Link href="/settings" passHref>
+            <Link href="/notifications" passHref>
               <motion.a
                 variants={sidebarItemAnimation}
                 whileHover={{ x: 4 }}
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-md font-medium transition-colors",
-                  isActive('/settings')
+                  isActive('/notifications')
                     ? "bg-primary/10 text-primary"
                     : "text-foreground hover:bg-accent"
                 )}
               >
-                <span className="text-lg">⚙️</span>
-                <span>Settings</span>
-              </motion.a>
-            </Link>
-            <Link href="/help" passHref>
-              <motion.a
-                variants={sidebarItemAnimation}
-                whileHover={{ x: 4 }}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-md font-medium transition-colors",
-                  isActive('/help')
-                    ? "bg-primary/10 text-primary"
-                    : "text-foreground hover:bg-accent"
-                )}
-              >
-                <span className="text-lg">❓</span>
-                <span>Help & Support</span>
+                <span className="text-lg">🔔</span>
+                <span>Notifications</span>
               </motion.a>
             </Link>
           </nav>

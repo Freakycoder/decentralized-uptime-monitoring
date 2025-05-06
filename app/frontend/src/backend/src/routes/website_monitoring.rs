@@ -9,7 +9,7 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, Qu
 use crate::types::website::{AddWebsiteInput, AddWebsiteResponse};
 
 pub fn website_router() -> Router<DatabaseConnection> {
-    Router::new().route("/add-website", post(website_to_add))
+    Router::new().route("/add", post(website_to_add))
 }
 
 #[axum::debug_handler]

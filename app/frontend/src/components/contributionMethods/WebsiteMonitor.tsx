@@ -6,6 +6,8 @@ import { Input } from '../ui/input';
 import { WebsiteMonitorData } from '../../types';
 import { fadeIn, slideUp, staggerContainer } from '../../lib/framer-variants';
 import { formatDate } from '../../lib/utils';
+import axios from 'axios';
+import { data } from 'framer-motion/client';
 
 // Extended mock data with status history
 const mockWebsiteData: (WebsiteMonitorData & { statusHistory: ('up' | 'down' | 'degraded')[] })[] = [
@@ -51,19 +53,19 @@ const WebsiteMonitor: React.FC = () => {
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!newWebsiteUrl.trim()) return;
-    
+
     setIsLoading(true);
-    
+
     // Simulate API call
     setTimeout(() => {
       // Generate random status history
       const statusOptions: ('up' | 'down' | 'degraded')[] = ['up', 'up', 'up', 'up', 'down', 'degraded'];
-      const randomHistory = Array(8).fill(null).map(() => 
+      const randomHistory = Array(8).fill(null).map(() =>
         statusOptions[Math.floor(Math.random() * statusOptions.length)]
       );
-      
+
       // For now, we'll just add it to the state
       const newWebsite = {
         url: newWebsiteUrl,
@@ -73,7 +75,7 @@ const WebsiteMonitor: React.FC = () => {
         uptimePercentage: 100,
         statusHistory: randomHistory
       };
-      
+
       setWebsites([newWebsite, ...websites]);
       setNewWebsiteUrl('');
       setIsLoading(false);
@@ -97,7 +99,7 @@ const WebsiteMonitor: React.FC = () => {
   // Get status badge
   const getStatusBadge = (status: 'up' | 'down' | 'degraded') => {
     const baseClasses = "inline-flex px-2 py-1 text-xs rounded-full font-medium";
-    
+
     switch (status) {
       case 'up':
         return `${baseClasses} bg-emerald-500/20 text-emerald-400 border border-emerald-500/30`;
@@ -110,6 +112,13 @@ const WebsiteMonitor: React.FC = () => {
     }
   };
 
+  const handler = async () => {
+    const response = await axios.post('http://localhost:3000/website-monitor/add', {
+      url_to_monitor: newWebsiteUrl
+    })
+    console.log(response.data)
+  }
+
   return (
     <motion.div
       variants={staggerContainer}
@@ -117,7 +126,40 @@ const WebsiteMonitor: React.FC = () => {
       animate="visible"
       className="space-y-8"
     >
-  
+      {/* Add new website form */}
+      <motion.div variants={fadeIn}>
+        <Card className="border-purple-500/20 bg-zinc-900">
+          <CardHeader className="border-b border-zinc-800">
+            <CardTitle className="text-purple-300">Add Website to Monitor</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="website-url" className="text-sm font-medium text-purple-200">
+                  Website URL
+                </label>
+                <Input
+                  id="website-url"
+                  type="url"
+                  placeholder="https://example.com"
+                  value={newWebsiteUrl}
+                  onChange={(e) => setNewWebsiteUrl(e.target.value)}
+                  className="bg-zinc-800 border-zinc-700 focus:border-purple-500 text-zinc-100"
+                  required
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={handler}
+              >
+                {isLoading ? 'Adding...' : 'Add Website'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Websites monitoring */}
       <motion.div variants={slideUp}>
@@ -156,7 +198,7 @@ const WebsiteMonitor: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Status Timeline */}
                   <div className="p-4 bg-zinc-900">
                     <div className="mb-2">
@@ -179,7 +221,7 @@ const WebsiteMonitor: React.FC = () => {
                   </div>
                 </div>
               ))}
-              
+
               {websites.length === 0 && (
                 <div className="py-10 text-center text-zinc-400 bg-zinc-800/30 rounded-lg border border-zinc-800">
                   No websites currently being monitored. Add one above!
