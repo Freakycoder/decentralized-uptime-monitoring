@@ -44,4 +44,3 @@ const WelcomeBanner: React.FC<WelcomeBannerProps> = ({ username = 'there' }) => 
 
 
 export default WelcomeBanner;
-
