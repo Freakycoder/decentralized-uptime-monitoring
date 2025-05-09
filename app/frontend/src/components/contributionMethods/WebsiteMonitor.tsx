@@ -119,7 +119,6 @@ const WebsiteMonitor: React.FC = () => {
     console.log(response.data)
   }
   
-
   return (
     <motion.div
       variants={staggerContainer}
