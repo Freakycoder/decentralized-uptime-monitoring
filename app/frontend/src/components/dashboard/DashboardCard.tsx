@@ -76,4 +76,5 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ method }) => {
   );
 };
 
+
 export default DashboardCard;
