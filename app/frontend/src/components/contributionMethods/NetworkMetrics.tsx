@@ -6,8 +6,6 @@ import { NetworkMetricsData } from '../../types';
 import { fadeIn, slideUp, pulseAnimation } from '../../lib/framer-variants';
 import { formatDate, formatNumber } from '../../lib/utils';
 
-
-
 // Mock data for network metrics
 const mockNetworkData: NetworkMetricsData[] = [
   {
