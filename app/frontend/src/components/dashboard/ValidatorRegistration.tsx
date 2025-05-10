@@ -9,7 +9,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { fadeIn, slideUp } from '../../lib/framer-variants';
 import axios from 'axios';
 import { useNotifications } from '../../contexts/NotificationsContext';
-import { bs58 } from '@solana/web3.js';
+import bs58  from 'bs58';
 
 const ValidatorRegistration = () => {
   const router = useRouter();

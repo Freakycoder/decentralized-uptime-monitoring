@@ -1,10 +1,11 @@
-// src/components/layout/Header.tsx
+// Modify Header.tsx to include the wallet button
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { Moon, Sun } from 'lucide-react';
 import { Button } from '../ui/button';
 import NotificationIndicator from './NotificationIndicator';
+import WalletButton from './WalletButton';
 import { fadeIn } from '../../lib/framer-variants';
 
 interface HeaderProps {
@@ -47,7 +48,10 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
       <h1 className="text-xl font-semibold">{title}</h1>
       
       <div className="flex items-center gap-3">
-        {/* Replace the old Bell button with our NotificationIndicator */}
+        {/* Add the wallet button */}
+        {mounted && <WalletButton />}
+        
+        {/* Notification indicator */}
         {mounted && <NotificationIndicator />}
         
         {themeToggle}

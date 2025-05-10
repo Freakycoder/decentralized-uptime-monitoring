@@ -7,9 +7,6 @@ import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import {
   PhantomWalletAdapter,
   SolflareWalletAdapter,
-  BackpackWalletAdapter,
-  BraveWalletAdapter,
-  SolletWalletAdapter,
   TorusWalletAdapter
 } from '@solana/wallet-adapter-wallets';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
@@ -34,9 +31,6 @@ export const JupiterWalletProvider: FC<WalletContextProviderProps> = ({ children
     () => [
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
-      new BackpackWalletAdapter(),
-      new BraveWalletAdapter(),
-      new SolletWalletAdapter(),
       new TorusWalletAdapter()
     ],
     [network]
