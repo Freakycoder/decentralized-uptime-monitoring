@@ -4,20 +4,23 @@ use axum::{
     extract::State,
     routing:: post,
 };
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
-
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 use crate::types::website::{AddWebsiteInput, AddWebsiteResponse};
+use crate::types::websocket::AppState;
 
-pub fn website_router() -> Router<DatabaseConnection> {
+pub fn website_router() -> Router<AppState> {
     Router::new().route("/add", post(website_to_add))
 }
 
 #[axum::debug_handler]
 async fn website_to_add(
-    State(db): State<DatabaseConnection>,
+    State(state): State<AppState>, // state represents globally shared data in rust. it is done bcoz we cannot pass db and ws twice using State()
     Json(website_data): Json<AddWebsiteInput>,
 ) -> Json<AddWebsiteResponse> {
     let url = website_data.url_to_monitor;
+    let db = state.db;
+    let ws = state.ws_manager;
+
     let existing_url = website_register::Entity::find()
         .filter(website_register::Column::WebsiteUrl.eq(&url))
         .one(&db)
@@ -47,6 +50,7 @@ async fn website_to_add(
 
     match result {
         Ok(_) => {
+            ws.handle_api_connection(socket);
             return Json(AddWebsiteResponse {
                 status_code: 200,
                 message: format!("New URL registered succesfully"),

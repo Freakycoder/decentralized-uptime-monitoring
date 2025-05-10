@@ -1,5 +1,9 @@
-use sea_orm::prelude::DateTimeWithTimeZone;
+use std::sync::Arc;
+
+use sea_orm::{prelude::DateTimeWithTimeZone, DatabaseConnection};
 use serde::{Deserialize, Serialize};
+
+use crate::websocket::manager::WebSocketManager;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ValidatorMessage {
@@ -56,4 +60,10 @@ pub struct Location {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ServerMessage {
     pub url: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct AppState{
+    pub db : DatabaseConnection,
+    pub ws_manager : Arc<WebSocketManager>
 }

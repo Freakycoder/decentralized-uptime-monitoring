@@ -271,7 +271,7 @@ import {
       title: 'New Contribution Method',
       message: 'Computing Resources contribution method is coming soon',
       timestamp: '2025-04-18T14:22:36Z',
-      read: true,
+      read: false,
     },
     {
       id: 'notif_4',

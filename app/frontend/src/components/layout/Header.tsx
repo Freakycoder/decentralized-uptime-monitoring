@@ -2,9 +2,9 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
-import { Moon, Sun, Bell } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 import { Button } from '../ui/button';
-import { cn } from '../../lib/utils';
+import NotificationIndicator from './NotificationIndicator';
 import { fadeIn } from '../../lib/framer-variants';
 
 interface HeaderProps {
@@ -47,10 +47,8 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
       <h1 className="text-xl font-semibold">{title}</h1>
       
       <div className="flex items-center gap-3">
-        <Button variant="outline" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive" />
-        </Button>
+        {/* Replace the old Bell button with our NotificationIndicator */}
+        {mounted && <NotificationIndicator />}
         
         {themeToggle}
       </div>
@@ -59,5 +57,3 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
 };
 
 export default Header;
-
-

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import type { AppProps } from 'next/app';
 import Head from 'next/head';
 import { ThemeProvider } from 'next-themes';
+import { NotificationsProvider } from '../contexts/NotificationsContext';
 import '../styles/globals.css';
 
 function MyApp({ Component, pageProps }: AppProps) {
@@ -15,23 +16,25 @@ function MyApp({ Component, pageProps }: AppProps) {
 
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-      <Head>
-        <title>Digital Data Contribution Network</title>
-        <meta name="description" content="Contribute digital data and earn rewards on Solana" />
-        <link rel="icon" href="/favicon.ico" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      </Head>
-      
-      <div suppressHydrationWarning>
-        {!mounted ? (
-          // Show a basic loading state that won't cause hydration issues
-          <div className="flex h-screen w-screen items-center justify-center bg-background text-foreground">
-            <div className="text-center">Loading...</div>
-          </div>
-        ) : (
-          <Component {...pageProps} />
-        )}
-      </div>
+      <NotificationsProvider>
+        <Head>
+          <title>Digital Data Contribution Network</title>
+          <meta name="description" content="Contribute digital data and earn rewards on Solana" />
+          <link rel="icon" href="/favicon.ico" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        </Head>
+        
+        <div suppressHydrationWarning>
+          {!mounted ? (
+            // Show a basic loading state that won't cause hydration issues
+            <div className="flex h-screen w-screen items-center justify-center bg-background text-foreground">
+              <div className="text-center">Loading...</div>
+            </div>
+          ) : (
+            <Component {...pageProps} />
+          )}
+        </div>
+      </NotificationsProvider>
     </ThemeProvider>
   );
 }

@@ -7,7 +7,7 @@ import { WebsiteMonitorData } from '../../types';
 import { fadeIn, slideUp, staggerContainer } from '../../lib/framer-variants';
 import { formatDate } from '../../lib/utils';
 import axios from 'axios';
-import { data } from 'framer-motion/client';
+import { useNotifications } from '../../contexts/NotificationsContext';
 
 // Extended mock data with status history
 const mockWebsiteData: (WebsiteMonitorData & { statusHistory: ('up' | 'down' | 'degraded')[] })[] = [
@@ -49,6 +49,7 @@ const WebsiteMonitor: React.FC = () => {
   const [websites, setWebsites] = useState<(WebsiteMonitorData & { statusHistory: ('up' | 'down' | 'degraded')[] })[]>(mockWebsiteData);
   const [newWebsiteUrl, setNewWebsiteUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { addNotification } = useNotifications();
 
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
@@ -112,13 +113,67 @@ const WebsiteMonitor: React.FC = () => {
     }
   };
 
-  const handler = async () => {
-    const response = await axios.post('http://localhost:3000/website-monitor/add', {
-      url_to_monitor: newWebsiteUrl
-    })
-    console.log(response.data)
-  }
-  
+  // Handler for adding a website to monitor
+  const addWebsiteHandler = async () => {
+    setIsLoading(true);
+    
+    try {
+      const response = await axios.post('http://127.0.0.1:3001/website-monitor/add', {
+        url_to_monitor: newWebsiteUrl
+      });
+      
+      console.log(response.data);
+      
+      // Check if the website was added successfully
+      if (response.data.status_code === 200) {
+        // Add a notification
+        addNotification(
+          'Website Added Successfully', 
+          `${newWebsiteUrl} has been added to your monitoring list.`
+        );
+        
+        // Generate random status history for the UI
+        const statusOptions: ('up' | 'down' | 'degraded')[] = ['up', 'up', 'up', 'up', 'down', 'degraded'];
+        const randomHistory = Array(8).fill(null).map(() =>
+          statusOptions[Math.floor(Math.random() * statusOptions.length)]
+        );
+        
+        // Add the website to the UI list
+        const newWebsite = {
+          url: newWebsiteUrl,
+          status: 'up' as const,
+          responseTime: Math.floor(Math.random() * 500) + 100,
+          lastChecked: new Date().toISOString(),
+          uptimePercentage: 100,
+          statusHistory: randomHistory
+        };
+        
+        setWebsites([newWebsite, ...websites]);
+        setNewWebsiteUrl('');
+      } else if (response.data.status_code === 409) {
+        // Website already exists
+        addNotification(
+          'Website Already Exists', 
+          `${newWebsiteUrl} is already being monitored.`
+        );
+      } else {
+        // Some other error
+        addNotification(
+          'Error Adding Website', 
+          `Failed to add ${newWebsiteUrl}. Please try again.`
+        );
+      }
+    } catch (error) {
+      console.error('Error adding website:', error);
+      addNotification(
+        'Error Adding Website', 
+        `Failed to add ${newWebsiteUrl}. Server error occurred.`
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <motion.div
       variants={staggerContainer}
@@ -149,10 +204,10 @@ const WebsiteMonitor: React.FC = () => {
                 />
               </div>
               <Button
-                type="submit"
+                type="button"
                 disabled={isLoading}
                 className="bg-purple-600 hover:bg-purple-700 text-white"
-                onClick={handler}
+                onClick={addWebsiteHandler}
               >
                 {isLoading ? 'Adding...' : 'Add Website'}
               </Button>
