@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/router';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../ui/card';
@@ -9,7 +9,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { fadeIn, slideUp } from '../../lib/framer-variants';
 import axios from 'axios';
 import { useNotifications } from '../../contexts/NotificationsContext';
-import bs58  from 'bs58';
+import bs58 from 'bs58';
 
 const ValidatorRegistration = () => {
   const router = useRouter();
@@ -20,15 +20,17 @@ const ValidatorRegistration = () => {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'connect' | 'validate' | 'complete'>('connect');
 
+  // Check if wallet is connected when component mounts or when connection status changes
+  useEffect(() => {
+    if (connected && publicKey) {
+      setStep('validate');
+    }
+  }, [connected, publicKey]);
+
   const handleConnectWallet = async () => {
     if (!connected) {
       // Open the wallet modal for connection
       setVisible(true);
-      
-      // We'll check if connected in useEffect
-      if (connected && publicKey) {
-        setStep('validate');
-      }
     } else {
       setStep('validate');
     }
@@ -92,9 +94,9 @@ const ValidatorRegistration = () => {
           'You are now registered as a validator and can contribute to the network.'
         );
         
-        // Redirect to dashboard after a short delay
+        // UPDATED: Redirect to home page instead of root
         setTimeout(() => {
-          router.push('/');
+          router.push('/home');
         }, 2000);
       } else {
         throw new Error(response.data.message || 'Failed to register as validator');

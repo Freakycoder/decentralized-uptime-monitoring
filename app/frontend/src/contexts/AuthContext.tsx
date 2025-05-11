@@ -40,8 +40,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Protect routes - redirect to login if not authenticated
   useEffect(() => {
-    if (!isLoading && !isAuthenticated && router.pathname !== '/login' && router.pathname !== '/signup') {
-      router.push('/login');
+    if (!isLoading && !isAuthenticated && router.pathname !== '/' && router.pathname !== '/signup') {
+      router.push('/');
     }
   }, [isAuthenticated, isLoading, router]);
 
@@ -79,7 +79,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('userEmail');
     setIsAuthenticated(false);
     setIsValidated(false);
-    router.push('/login');
+    // UPDATED: Now redirects to root (/) instead of /login
+    router.push('/');
   };
 
   const checkValidatorStatus = async () => {

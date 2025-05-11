@@ -7,9 +7,11 @@ import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { fadeIn, slideUp } from '../lib/framer-variants';
 import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,25 +23,13 @@ const Login = () => {
     setError('');
 
     try {
-      // Call the login API
-      const response = await axios.post('http://127.0.0.1:3001/user/signin', {
-        username: '', // The backend requires this field but doesn't use it
-        email,
-        password
-      });
-
-      if (response.data.status_code === 200 && response.data.token) {
-        // Store the JWT token for future API calls
-        localStorage.setItem('authToken', response.data.token);
-        
-        // Store user state
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userEmail', email);
-        
-        // Redirect to dashboard
-        router.push('/');
+      const result = await login(email, password);
+      
+      if (result.success) {
+        // Redirect to home page instead of index
+        router.push('/home');
       } else {
-        setError(response.data.message || 'Login failed. Please try again.');
+        setError(result.message);
       }
     } catch (err) {
       console.error('Login error:', err);

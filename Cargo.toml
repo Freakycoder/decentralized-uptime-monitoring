@@ -1,5 +1,5 @@
 [workspace]
-members = [ "app/frontend/src/backend",
+members = [ "app/backend",
     "programs/*"
 ]
 resolver = "2"

@@ -18,15 +18,15 @@ const Sidebar = () => {
   // After mounting, we can safely access window
   useEffect(() => {
     setMounted(true);
-    
+
     // Check if we're on a desktop screen
     const checkIsDesktop = () => {
       setIsDesktop(window.innerWidth >= 768); // 768px is the md breakpoint
     };
-    
+
     checkIsDesktop(); // Initial check
     window.addEventListener('resize', checkIsDesktop);
-    
+
     return () => window.removeEventListener('resize', checkIsDesktop);
   }, []);
 
@@ -36,6 +36,9 @@ const Sidebar = () => {
 
   // Sidebar link utility - adds active state
   const isActive = (path: string) => {
+    if (path === '/home' && router.pathname === '/home') {
+      return true;
+    }
     return router.pathname === path;
   };
 
@@ -94,14 +97,14 @@ const Sidebar = () => {
             Dashboard
           </div>
           <nav>
-            <Link href="/" passHref>
+            <Link href="/home" passHref>
               <motion.a
                 variants={sidebarItemAnimation}
                 whileHover={{ x: 4 }}
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-md mb-1 font-medium transition-colors",
-                  isActive('/') 
-                    ? "bg-primary/10 text-primary" 
+                  isActive('/home')
+                    ? "bg-primary/10 text-primary"
                     : "text-foreground hover:bg-accent"
                 )}
               >
