@@ -26,7 +26,7 @@ async fn signup(
     State(db): State<DatabaseConnection>,
     Json(user_data): Json<UserInput>,
 ) -> Json<SignUpResponse> {
-    let username = user_data.username;
+
     let email = user_data.email;
     let password = user_data.password;
 
@@ -52,7 +52,6 @@ async fn signup(
     }
 
     let new_user= user::ActiveModel {
-        username: Set(username),
         email: Set(email),
         password_hash: Set(create_hash(password)),
         ..Default::default()
