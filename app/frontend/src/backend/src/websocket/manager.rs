@@ -16,7 +16,8 @@ pub struct WebSocketManager {
 }
 
 impl WebSocketManager {
-    pub fn new() -> Self { // this is the contructor of the class
+    pub fn new() -> Self {
+        // this is the contructor of the class
         let (broadcast_sender, _) = broadcast::channel(1000); // tx is the one who sends message and rx are the one who gets the message when subscribed using (tx.subscribe())
         Self {
             connections: Arc::new(DashMap::new()),
@@ -166,6 +167,18 @@ impl WebSocketManager {
                 _ => {}
             }
         }
+    }
+
+    pub fn website_to_broadcast(&self, url: String) -> () {
+        let url_to_broadcast = ServerMessage {
+            url: url.to_owned(),
+        };
+        let _ = self.broadcast_tx.send(url_to_broadcast.clone());
+        println!(
+            "Broadcasted new website URL to all validators: {}",
+            url_to_broadcast.url
+        );
+        ()
     }
 
     // here we're using the reqwest library which is exatcly the same as axios.
