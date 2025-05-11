@@ -41,7 +41,7 @@ async fn website_to_add(
     }
 
     let new_url = website_register::ActiveModel {
-        website_url: Set(url),
+        website_url: Set(url.clone()),
         user_id: Set(String::from("ahmed")),
         ..Default::default()
     };
@@ -50,7 +50,7 @@ async fn website_to_add(
 
     match result {
         Ok(_) => {
-            ws.handle_api_connection(socket);
+            ws.website_to_broadcast(url);
             return Json(AddWebsiteResponse {
                 status_code: 200,
                 message: format!("New URL registered succesfully"),
