@@ -1,5 +1,5 @@
-use std::sync::Arc;
-
+use std::{env, sync::Arc};
+use dotenvy::dotenv;
 use axum::{Router, routing::get};
 use sea_orm::Database;
 use tower_http::cors::{Any, CorsLayer};
@@ -12,7 +12,7 @@ use crate::types::websocket::AppState;
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
-    let database_url = "postgresql://neondb_owner:npg_ofquS9UYb8AE@ep-cool-field-a47qdvry-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require";
+    let database_url = env::var("DATABASE_URL").expect("set in env file");
     let db = Database::connect(database_url)
         .await
         .expect("failed to connect");
