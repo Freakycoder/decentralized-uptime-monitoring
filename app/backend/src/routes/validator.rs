@@ -9,6 +9,7 @@ use axum::{Json, Router, debug_handler, routing::post};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use solana_sdk::{pubkey::Pubkey, signature::Signature};
 
+
 pub fn validator_router() -> Router<DatabaseConnection> {
     Router::new()
         .route("/wallet", post(handle_connection))
