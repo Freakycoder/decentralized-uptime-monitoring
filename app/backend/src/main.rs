@@ -1,5 +1,5 @@
 use std::{env, sync::Arc};
-use dotenvy::dotenv;
+use migration::{Migrator};
 use axum::{Router, routing::get};
 use sea_orm::Database;
 use tower_http::cors::{Any, CorsLayer};
