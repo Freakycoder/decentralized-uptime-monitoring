@@ -10,6 +10,7 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, Qu
 use solana_sdk::{pubkey::Pubkey, signature::Signature};
 
 
+
 pub fn validator_router() -> Router<DatabaseConnection> {
     Router::new()
         .route("/wallet", post(handle_connection))
