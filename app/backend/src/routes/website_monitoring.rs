@@ -9,6 +9,7 @@ use crate::types::website::{AddWebsiteInput, AddWebsiteResponse};
 use crate::types::websocket::AppState;
 
 
+
 pub fn website_router() -> Router<AppState> {
     Router::new().route("/add", post(website_to_add))
 }
