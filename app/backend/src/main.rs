@@ -1,5 +1,5 @@
 use std::{env, sync::Arc};
-use migration::{Migrator, MigrationTrait};
+use migration::{Migrator, MigratorTrait};
 use axum::{Router, routing::get};
 use sea_orm::Database;
 use tower_http::cors::{Any, CorsLayer};
@@ -12,11 +12,19 @@ use crate::types::websocket::AppState;
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
+    dotenvy::dotenv().ok();
     let database_url = env::var("DATABASE_URL").expect("set in env file");
+    println!("Connecting to database: {}", &database_url[..50]);
     let db = Database::connect(database_url)
         .await
         .expect("failed to connect");
-    Migrator::up(&db, None).await.expect("Failed to run migrations");
+    match Migrator::up(&db, None).await {
+        Ok(_) => {println!("Migration applied succesfully")},
+        Err(e) => {
+            eprintln!("Migration failed with error: {}", e);
+            panic!("cannot continue without tables");
+        }
+    }
     println!("Database connected successfully!");
 
     let ws_manager = Arc::new(WebSocketManager::new()); // the WebSocketManager::new() is invoking the constructor present in websocket class, which initializes the connectin and broadcast

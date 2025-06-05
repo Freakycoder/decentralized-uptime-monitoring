@@ -7,7 +7,7 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: Uuid,
     #[sea_orm(unique)]
-    pub user_id: String,
+    pub user_id: Uuid,
     #[sea_orm(unique)]
     pub wallet_address : String,
     pub latitude: Option<f64>,

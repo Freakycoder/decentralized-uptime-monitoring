@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserInput{
@@ -22,7 +23,7 @@ pub struct Claims {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ValidatorInput{
-    pub user_id: String,
+    pub user_id: Uuid,
     pub wallet_address : String,
     pub latitude: f64,
     pub longitude: f64,

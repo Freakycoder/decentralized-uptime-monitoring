@@ -5,7 +5,7 @@ use sea_orm::entity::prelude::*;
 pub struct Model{
     #[sea_orm(primary_key)]
     pub id: Uuid,
-    pub validator_id : String,
+    pub validator_id : Uuid,
     pub website_id: Uuid,
     pub timestamp: DateTimeWithTimeZone,
     pub http_status_code: Option<i32>,
