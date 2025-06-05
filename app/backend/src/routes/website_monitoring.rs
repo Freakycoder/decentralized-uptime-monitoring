@@ -5,6 +5,7 @@ use axum::{
     routing:: post,
 };
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
+use uuid::Uuid;
 use crate::types::website::{AddWebsiteInput, AddWebsiteResponse};
 use crate::types::websocket::AppState;
 
@@ -44,7 +45,7 @@ async fn website_to_add(
 
     let new_url = website_register::ActiveModel {
         website_url: Set(url.clone()),
-        user_id: Set(String::from("ahmed")),
+        user_id: Set(Uuid::new_v4()),
         ..Default::default()
     };
 

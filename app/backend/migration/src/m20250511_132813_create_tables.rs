@@ -1,4 +1,4 @@
-use sea_orm_migration::{prelude::*, schema::*};
+use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -6,80 +6,165 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        // Create Users table first (referenced by other tables)
         manager
             .create_table(
                 Table::create()
                     .table(Users::Table)
                     .if_not_exists()
-                    .col(uuid(Users::Id).primary_key())
-                    .col(string(Users::Email).unique_key())
-                    .col(string(Users::PasswordHash))
                     .col(
-                        timestamp_with_time_zone_null(Users::CreatedAt)
+                        ColumnDef::new(Users::Id)
+                            .uuid()
+                            .not_null()
+                            .auto_increment()
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(Users::Email)
+                            .string()
+                            .not_null()
+                            .unique_key(),
+                    )
+                    .col(
+                        ColumnDef::new(Users::PasswordHash)
+                            .string()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(Users::CreatedAt)
+                            .timestamp_with_time_zone()
                             .default(Expr::current_timestamp()),
                     )
                     .to_owned(),
             )
             .await?;
 
+        // Create Validators table
         manager
             .create_table(
                 Table::create()
                     .table(Validators::Table)
                     .if_not_exists()
-                    .col(uuid(Validators::Id).primary_key())
-                    .col(string(Validators::UserId).unique_key())
-                    .col(string(Validators::WalletAddress).unique_key())
-                    .col(double_null(Validators::Latitude))
-                    .col(double_null(Validators::Longitude))
-                    .col(string(Validators::DeviceId).unique_key())
                     .col(
-                        timestamp_with_time_zone_null(Validators::CreatedAt)
+                        ColumnDef::new(Validators::Id)
+                            .uuid()
+                            .not_null()
+                            .auto_increment()
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(Validators::UserId)
+                            .uuid()
+                            .not_null()
+                            .unique_key(),
+                    )
+                    .col(
+                        ColumnDef::new(Validators::WalletAddress)
+                            .string()
+                            .not_null()
+                            .unique_key(),
+                    )
+                    .col(ColumnDef::new(Validators::Latitude).double())
+                    .col(ColumnDef::new(Validators::Longitude).double())
+                    .col(
+                        ColumnDef::new(Validators::DeviceId)
+                            .string()
+                            .not_null()
+                            .unique_key(),
+                    )
+                    .col(
+                        ColumnDef::new(Validators::CreatedAt)
+                            .timestamp_with_time_zone()
                             .default(Expr::current_timestamp()),
                     )
                     .to_owned(),
             )
             .await?;
 
+        // Create WebsiteRegister table
         manager
             .create_table(
                 Table::create()
                     .table(WebsiteRegister::Table)
                     .if_not_exists()
-                    .col(uuid(WebsiteRegister::Id).primary_key())
-                    .col(string(WebsiteRegister::WebsiteUrl).unique_key())
-                    .col(string(WebsiteRegister::UserId))
                     .col(
-                        timestamp_with_time_zone(WebsiteRegister::Timestamp)
+                        ColumnDef::new(WebsiteRegister::Id)
+                            .uuid()
+                            .not_null()
+                            .auto_increment()
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(WebsiteRegister::WebsiteUrl)
+                            .string()
+                            .not_null()
+                            .unique_key(),
+                    )
+                    .col(
+                        ColumnDef::new(WebsiteRegister::UserId)
+                            .uuid()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(WebsiteRegister::Timestamp)
+                            .timestamp_with_time_zone()
+                            .not_null()
                             .default(Expr::current_timestamp()),
                     )
                     .to_owned(),
             )
             .await?;
 
+        // Create WebsitePerformance table
         manager
             .create_table(
                 Table::create()
                     .table(WebsitePerformance::Table)
                     .if_not_exists()
-                    .col(uuid(WebsitePerformance::Id).primary_key())
-                    .col(string(WebsitePerformance::ValidatorId))
-                    .col(uuid(WebsitePerformance::WebsiteId))
-                    .col(timestamp_with_time_zone(WebsitePerformance::Timestamp))
-                    .col(integer_null(WebsitePerformance::HttpStatusCode))
-                    .col(string_null(WebsitePerformance::ErrorType))
-                    .col(string_null(WebsitePerformance::ConnectionType))
-                    .col(integer_null(WebsitePerformance::DnsResolutionMs))
-                    .col(integer_null(WebsitePerformance::ConnectionTimeMs))
-                    .col(integer_null(WebsitePerformance::TlsHandshakeMs))
-                    .col(integer_null(WebsitePerformance::TimeToFirstByteMs))
-                    .col(integer_null(WebsitePerformance::ContentDownloadMs))
-                    .col(integer(WebsitePerformance::TotalTimeMs))
-                    .col(integer_null(WebsitePerformance::ContentSizeBytes))
-                    .col(boolean_null(WebsitePerformance::ContainsExpectedContent))
-                    .col(double_null(WebsitePerformance::Latitude))
-                    .col(double_null(WebsitePerformance::Longitude))
-                    .col(boolean(WebsitePerformance::IsValidated))
+                    .col(
+                        ColumnDef::new(WebsitePerformance::Id)
+                            .uuid()
+                            .not_null()
+                            .auto_increment()
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(WebsitePerformance::ValidatorId)
+                            .uuid()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(WebsitePerformance::WebsiteId)
+                            .uuid()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(WebsitePerformance::Timestamp)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .col(ColumnDef::new(WebsitePerformance::HttpStatusCode).integer())
+                    .col(ColumnDef::new(WebsitePerformance::ErrorType).string())
+                    .col(ColumnDef::new(WebsitePerformance::ConnectionType).string())
+                    .col(ColumnDef::new(WebsitePerformance::DnsResolutionMs).integer())
+                    .col(ColumnDef::new(WebsitePerformance::ConnectionTimeMs).integer())
+                    .col(ColumnDef::new(WebsitePerformance::TlsHandshakeMs).integer())
+                    .col(ColumnDef::new(WebsitePerformance::TimeToFirstByteMs).integer())
+                    .col(ColumnDef::new(WebsitePerformance::ContentDownloadMs).integer())
+                    .col(
+                        ColumnDef::new(WebsitePerformance::TotalTimeMs)
+                            .integer()
+                            .not_null(),
+                    )
+                    .col(ColumnDef::new(WebsitePerformance::ContentSizeBytes).integer())
+                    .col(ColumnDef::new(WebsitePerformance::ContainsExpectedContent).boolean())
+                    .col(ColumnDef::new(WebsitePerformance::Latitude).double())
+                    .col(ColumnDef::new(WebsitePerformance::Longitude).double())
+                    .col(
+                        ColumnDef::new(WebsitePerformance::IsValidated)
+                            .boolean()
+                            .not_null(),
+                    )
                     .to_owned(),
             )
             .await?;
@@ -91,7 +176,7 @@ impl MigrationTrait for Migration {
         manager
             .drop_table(Table::drop().table(WebsitePerformance::Table).to_owned())
             .await?;
-         manager
+        manager
             .drop_table(Table::drop().table(WebsiteRegister::Table).to_owned())
             .await?;
         manager
@@ -100,6 +185,7 @@ impl MigrationTrait for Migration {
         manager
             .drop_table(Table::drop().table(Users::Table).to_owned())
             .await?;
+        Ok(())
     }
 }
 
@@ -111,6 +197,7 @@ enum Users {
     PasswordHash,
     CreatedAt,
 }
+
 #[derive(DeriveIden)]
 enum Validators {
     Table,
@@ -122,6 +209,7 @@ enum Validators {
     DeviceId,
     CreatedAt,
 }
+
 #[derive(DeriveIden)]
 enum WebsiteRegister {
     Table,
@@ -130,6 +218,7 @@ enum WebsiteRegister {
     UserId,
     Timestamp,
 }
+
 #[derive(DeriveIden)]
 enum WebsitePerformance {
     Table,
