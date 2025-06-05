@@ -1,5 +1,5 @@
 use std::{env, sync::Arc};
-use migration::{Migrator};
+use migration::{Migrator, MigrationTrait};
 use axum::{Router, routing::get};
 use sea_orm::Database;
 use tower_http::cors::{Any, CorsLayer};
@@ -16,6 +16,7 @@ async fn main() -> Result<(), std::io::Error> {
     let db = Database::connect(database_url)
         .await
         .expect("failed to connect");
+    Migrator::up(&db, None).await.expect("Failed to run migrations");
     println!("Database connected successfully!");
 
     let ws_manager = Arc::new(WebSocketManager::new()); // the WebSocketManager::new() is invoking the constructor present in websocket class, which initializes the connectin and broadcast
