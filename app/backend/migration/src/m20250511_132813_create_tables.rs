@@ -6,6 +6,7 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        println!("🔄 Creating Users table...");
         // Create Users table first (referenced by other tables)
         manager
             .create_table(
@@ -16,8 +17,8 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(Users::Id)
                             .uuid()
                             .not_null()
-                            .auto_increment()
-                            .primary_key(),
+                            .primary_key()
+                            .default(Expr::cust("gen_random_uuid()")),
                     )
                     .col(
                         ColumnDef::new(Users::Email)
@@ -38,7 +39,9 @@ impl MigrationTrait for Migration {
                     .to_owned(),
             )
             .await?;
+        println!("✅ Users table created");
 
+        println!("🔄 Creating Validators table...");
         // Create Validators table
         manager
             .create_table(
@@ -49,8 +52,8 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(Validators::Id)
                             .uuid()
                             .not_null()
-                            .auto_increment()
-                            .primary_key(),
+                            .primary_key()
+                            .default(Expr::cust("gen_random_uuid()")), // ✅ Fixed: Use PostgreSQL's UUID generator
                     )
                     .col(
                         ColumnDef::new(Validators::UserId)
@@ -80,7 +83,9 @@ impl MigrationTrait for Migration {
                     .to_owned(),
             )
             .await?;
+        println!("✅ Validators table created");
 
+        println!("🔄 Creating WebsiteRegister table...");
         // Create WebsiteRegister table
         manager
             .create_table(
@@ -91,8 +96,8 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(WebsiteRegister::Id)
                             .uuid()
                             .not_null()
-                            .auto_increment()
-                            .primary_key(),
+                            .primary_key()
+                            .default(Expr::cust("gen_random_uuid()")), // ✅ Fixed: Use PostgreSQL's UUID generator
                     )
                     .col(
                         ColumnDef::new(WebsiteRegister::WebsiteUrl)
@@ -114,7 +119,9 @@ impl MigrationTrait for Migration {
                     .to_owned(),
             )
             .await?;
+        println!("✅ WebsiteRegister table created");
 
+        println!("🔄 Creating WebsitePerformance table...");
         // Create WebsitePerformance table
         manager
             .create_table(
@@ -125,8 +132,8 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(WebsitePerformance::Id)
                             .uuid()
                             .not_null()
-                            .auto_increment()
-                            .primary_key(),
+                            .primary_key()
+                            .default(Expr::cust("gen_random_uuid()")), // ✅ Fixed: Use PostgreSQL's UUID generator
                     )
                     .col(
                         ColumnDef::new(WebsitePerformance::ValidatorId)
@@ -168,7 +175,9 @@ impl MigrationTrait for Migration {
                     .to_owned(),
             )
             .await?;
+        println!("✅ WebsitePerformance table created");
 
+        println!("🎉 All tables created successfully!");
         Ok(())
     }
 
