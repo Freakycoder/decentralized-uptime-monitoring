@@ -8,6 +8,7 @@ pub mod entities;
 pub mod routes;
 pub mod types;
 pub mod websocket;
+pub mod middlewares;
 use crate::types::websocket::AppState;
 
 #[tokio::main]
@@ -37,6 +38,7 @@ async fn main() -> Result<(), std::io::Error> {
         .route("/", get(sayhello))
         .nest("/user", routes::user::user_router().with_state(db.clone()))
         .nest("/ws", routes::websocket::websocket_router(ws_manager))
+        .nest("/validator", routes::validator::validator_router().with_state(db.clone()))
         .nest("/website-monitor", routes::website_monitoring::website_router().with_state(app_state))
         .layer(
             CorsLayer::new()
