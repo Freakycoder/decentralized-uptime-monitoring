@@ -126,7 +126,7 @@ pub fn generate_jwt(user_id: &str) -> String {
         .timestamp() as usize;
 
     let claims = Claims {
-        sub: user_id.to_owned(),
+        user_id: user_id.to_owned(),
         exp: expiration,
     };
     let token = encode(
