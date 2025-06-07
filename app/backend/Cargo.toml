@@ -23,3 +23,4 @@ futures-util = "0.3.31"
 reqwest = { version = "0.12.15" , features = ["json"]}
 dotenvy = "0.15.7"
 migration = { path = "./migration" }
+bytes = "1.10.1"
