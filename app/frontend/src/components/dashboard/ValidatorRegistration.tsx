@@ -18,6 +18,7 @@ const ValidatorRegistration = () => {
   const { setValidated } = useAuth();
   const { addNotification } = useNotifications();
   const [loading, setLoading] = useState(false);
+  const [locationError, setLocationError] = useState<string>('');
   const [step, setStep] = useState<'connect' | 'validate' | 'complete'>('connect');
 
   // Check if wallet is connected when component mounts or when connection status changes
@@ -36,6 +37,47 @@ const ValidatorRegistration = () => {
     }
   };
 
+  // Helper function to get current position with better error handling
+  const getCurrentPosition = (): Promise<GeolocationPosition> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('GEOLOCATION_NOT_SUPPORTED'));
+        return;
+      }
+
+      const options: PositionOptions = {
+        enableHighAccuracy: true,
+        timeout: 10000, // 10 seconds timeout
+        maximumAge: 60000 // Accept a cached position that's up to 1 minute old
+      };
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve(position);
+        },
+        (error) => {
+          let errorMessage = '';
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'PERMISSION_DENIED';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'POSITION_UNAVAILABLE';
+              break;
+            case error.TIMEOUT:
+              errorMessage = 'TIMEOUT';
+              break;
+            default:
+              errorMessage = 'UNKNOWN_ERROR';
+              break;
+          }
+          reject(new Error(errorMessage));
+        },
+        options
+      );
+    });
+  };
+
   const handleValidatorRegistration = async () => {
     if (!connected || !publicKey) {
       setStep('connect');
@@ -43,19 +85,54 @@ const ValidatorRegistration = () => {
     }
 
     setLoading(true);
+    setLocationError('');
 
     try {
-      // 1. Get user's geolocation
-      const position = await getCurrentPosition();
-      const { latitude, longitude } = position.coords;
+      // 1. Get user's geolocation with better error handling
+      let latitude: number;
+      let longitude: number;
+
+      try {
+        const position = await getCurrentPosition();
+        latitude = position.coords.latitude;
+        longitude = position.coords.longitude;
+      } catch (locationErr: any) {
+        const errorMessage = locationErr.message;
+        
+        let userFriendlyMessage = '';
+        switch (errorMessage) {
+          case 'GEOLOCATION_NOT_SUPPORTED':
+            userFriendlyMessage = 'Your browser does not support geolocation. Please use a modern browser.';
+            break;
+          case 'PERMISSION_DENIED':
+            userFriendlyMessage = 'Location permission was denied. Please enable location access and try again.';
+            break;
+          case 'POSITION_UNAVAILABLE':
+            userFriendlyMessage = 'Your location could not be determined. Please check your device settings.';
+            break;
+          case 'TIMEOUT':
+            userFriendlyMessage = 'Location request timed out. Please try again.';
+            break;
+          default:
+            userFriendlyMessage = 'Unable to get your location. Please try again.';
+        }
+        
+        setLocationError(userFriendlyMessage);
+        addNotification(
+          'Location Error',
+          userFriendlyMessage
+        );
+        setLoading(false);
+        return;
+      }
 
       // 2. Generate a device ID - in a real app, this would be more robust
       const deviceId = 'device_' + Math.random().toString(36).substring(2, 10);
 
-      // 4. Create a validation message
+      // 3. Create a validation message
       const message = `I am registering as a validator with device ${deviceId} at coordinates ${latitude.toFixed(6)},${longitude.toFixed(6)}`;
 
-      // 5. Sign the message with the wallet
+      // 4. Sign the message with the wallet
       if (!signMessage) {
         throw new Error("Wallet doesn't support message signing");
       }
@@ -65,7 +142,7 @@ const ValidatorRegistration = () => {
       const signature = await signMessage(messageBytes);
       const signatureBase58 = bs58.encode(signature);
 
-      // 6. Register as validator
+      // 5. Register as validator
       const response = await axios.post('http://127.0.0.1:3001/validator/verify-validator', {
         wallet_address: publicKey.toString(),
         latitude,
@@ -90,7 +167,7 @@ const ValidatorRegistration = () => {
           'You are now registered as a validator and can contribute to the network.'
         );
 
-        // UPDATED: Redirect to home page instead of root
+        // Redirect to home page
         setTimeout(() => {
           router.push('/home');
         }, 2000);
@@ -108,16 +185,9 @@ const ValidatorRegistration = () => {
     }
   };
 
-  // Helper function to get current position
-  const getCurrentPosition = (): Promise<GeolocationPosition> => {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error('Geolocation is not supported by this browser.'));
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(resolve, reject);
-    });
+  const handleRetryLocation = () => {
+    setLocationError('');
+    handleValidatorRegistration();
   };
 
   return (
@@ -161,6 +231,33 @@ const ValidatorRegistration = () => {
                 <p className="text-sm text-muted-foreground mb-4">
                   Your wallet is connected. Now we need to register you as a validator on the network. This will require your location to help verify your identity.
                 </p>
+                
+                {locationError && (
+                  <div className="mb-4 p-3 bg-destructive/20 border border-destructive/30 rounded-md">
+                    <div className="text-destructive text-sm font-medium mb-2">Location Error</div>
+                    <div className="text-destructive text-sm mb-3">{locationError}</div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleRetryLocation}
+                        size="sm"
+                        variant="outline"
+                        className="border-destructive text-destructive hover:bg-destructive/10"
+                        disabled={loading}
+                      >
+                        Retry
+                      </Button>
+                      <Button
+                        onClick={() => window.location.reload()}
+                        size="sm"
+                        variant="outline"
+                        className="border-destructive text-destructive hover:bg-destructive/10"
+                      >
+                        Refresh Page
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
                 <Button
                   onClick={handleValidatorRegistration}
                   className="w-full bg-primary"
@@ -168,6 +265,16 @@ const ValidatorRegistration = () => {
                 >
                   {loading ? 'Registering...' : 'Register as Validator'}
                 </Button>
+                
+                <div className="mt-3 text-xs text-muted-foreground">
+                  <strong>Troubleshooting:</strong> If you're having location issues, please:
+                  <ul className="mt-1 ml-4 list-disc">
+                    <li>Allow location access when prompted</li>
+                    <li>Check your browser's location settings</li>
+                    <li>Ensure location services are enabled on your device</li>
+                    <li>Try using HTTPS if you're on HTTP</li>
+                  </ul>
+                </div>
               </div>
             </motion.div>
           )}

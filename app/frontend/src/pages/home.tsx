@@ -41,7 +41,7 @@ const Home = () => {
   return (
     <Layout title="Dashboard">
       {/* Welcome banner */}
-      <WelcomeBanner username="John" />
+      <WelcomeBanner />
 
       {/* Stats overview */}
       <div className="mb-6">
