@@ -1,23 +1,23 @@
 use std::str::FromStr;
 
 use crate::entities::validator;
+use crate::middlewares::validator_auth::validator_jwt_middleware;
 use crate::types::user::{ValidatorInput, VerifySignatureRequest, VerifyValidatorResponse};
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::{Json, Router, debug_handler, routing::post};
+use axum::{debug_handler, middleware, routing::post, Json, Router};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use solana_sdk::{pubkey::Pubkey, signature::Signature};
-
-
 
 pub fn validator_router() -> Router<DatabaseConnection> {
     Router::new()
         .route("/wallet", post(handle_connection))
-        .route("/verify-validator", post(verify_validator))
+        .route(
+            "/verify-validator",
+            post(verify_validator).layer(middleware::from_fn(validator_jwt_middleware)),
+        )
 }
-
-
 
 #[debug_handler]
 async fn verify_validator(
@@ -92,7 +92,6 @@ async fn handle_connection(
         }
     };
 
-    
     let signature_bytes = match Signature::from_str(&verification_data.signature) {
         Ok(sig) => sig,
         Err(parse_error) => {
