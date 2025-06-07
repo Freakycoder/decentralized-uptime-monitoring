@@ -582,6 +582,7 @@ dependencies = [
  "axum",
  "bcrypt",
  "bs58",
+ "bytes",
  "chrono",
  "dashmap",
  "dotenvy",
