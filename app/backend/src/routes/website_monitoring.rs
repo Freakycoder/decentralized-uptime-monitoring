@@ -45,7 +45,6 @@ async fn website_to_add(
 
     let new_url = website_register::ActiveModel {
         website_url: Set(url.clone()),
-        user_id: Set(Uuid::new_v4()),
         ..Default::default()
     };
 

@@ -7,7 +7,6 @@ pub struct Model{
     pub id: Uuid,
     #[sea_orm(unique)]
     pub website_url: String,
-    pub user_id : Uuid,
     #[sea_orm(default_value = "CURRENT_TIMESTAMP")]
     pub timestamp: DateTimeWithTimeZone,
 }

@@ -16,7 +16,7 @@ const WelcomeBanner: React.FC = () => {
   const [url, setUrl] = useState<string>()
 
   const handler = async () => {
-    const response = await axios.post("http://localhost:3001/ws/add", {
+    const response = await axios.post("http://localhost:3001/website-monitor/add", {
       url_to_monitor: url
     });
 
