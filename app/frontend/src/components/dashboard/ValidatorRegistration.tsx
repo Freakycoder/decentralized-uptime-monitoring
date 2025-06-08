@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/router';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../ui/card';
@@ -10,7 +10,6 @@ import { fadeIn, slideUp } from '../../lib/framer-variants';
 import axios from 'axios';
 import { useNotifications } from '../../contexts/NotificationsContext';
 import bs58 from 'bs58';
-import { tr } from 'framer-motion/client';
 
 interface WebSocketConnectionStatus {
   connected: boolean;
@@ -32,17 +31,29 @@ const ValidatorRegistration = () => {
     connecting: false,
     error: null
   });
+  const websocketRef = useRef<WebSocket | null>(null);
 
   // Check if wallet is connected when component mounts or when connection status changes
   useEffect(() => {
+    console.log('🔗 Wallet connection status:', { connected, publicKey: publicKey?.toString() });
     if (connected && publicKey) {
       setStep('validate');
     }
   }, [connected, publicKey]);
 
+  // Cleanup WebSocket connection on component unmount
+  useEffect(() => {
+    return () => {
+      if (websocketRef.current) {
+        console.log('🧹 Cleaning up WebSocket connection');
+        websocketRef.current.close();
+      }
+    };
+  }, []);
+
   const handleConnectWallet = async () => {
     if (!connected) {
-      // Open the wallet modal for connection
+      console.log('💼 Opening wallet modal');
       setVisible(true);
     } else {
       setStep('validate');
@@ -59,8 +70,8 @@ const ValidatorRegistration = () => {
 
       const options: PositionOptions = {
         enableHighAccuracy: true,
-        timeout: 10000, // 10 seconds timeout
-        maximumAge: 60000 // Accept a cached position that's up to 1 minute old
+        timeout: 10000,
+        maximumAge: 60000
       };
 
       navigator.geolocation.getCurrentPosition(
@@ -90,24 +101,162 @@ const ValidatorRegistration = () => {
     });
   };
 
+  const establishWebsocketConnection = async (validatorId: string, latitude: number, longitude: number) => {
+    console.log('🔌 Starting WebSocket connection process...');
+    setStep('socket-connecting');
+    setSocketStatus({
+      connected: false,
+      connecting: true, // Set to true when starting connection
+      error: null
+    });
+
+    try {
+      // Fixed WebSocket URL - added missing port number
+      const wsUrl = 'ws://127.0.0.1:3001/ws/upgrade';
+      console.log('🌐 Connecting to WebSocket:', wsUrl);
+      
+      const ws = new WebSocket(wsUrl);
+      websocketRef.current = ws;
+
+      // Set connection timeout
+      const connectionTimeout = setTimeout(() => {
+        console.log('⏰ WebSocket connection timeout');
+        if (ws.readyState === WebSocket.CONNECTING) {
+          ws.close();
+          setSocketStatus({
+            connected: false,
+            connecting: false,
+            error: 'Connection timeout'
+          });
+          addNotification(
+            'Connection Timeout',
+            'WebSocket connection timed out. You can continue without real-time features.'
+          );
+          setTimeout(() => setStep('complete'), 1000);
+        }
+      }, 10000); // 10 second timeout
+
+      ws.onopen = () => {
+        console.log('✅ WebSocket connected successfully');
+        clearTimeout(connectionTimeout);
+        setSocketStatus({ connected: true, connecting: false, error: null });
+
+        // NOW send the registration message - only after connection is open
+        const registrationMessage = {
+          RegisterValidator: {
+            validator_id: validatorId,
+            location: {
+              latitude,
+              longitude
+            }
+          }
+        };
+
+        console.log('📨 Sending validator registration:', registrationMessage);
+        ws.send(JSON.stringify(registrationMessage));
+
+        addNotification(
+          'Network Connection Established',
+          'Successfully connected to the validator network.'
+        );
+
+        // Move to complete step after successful connection
+        setTimeout(() => {
+          setStep('complete');
+        }, 2000);
+      };
+
+      ws.onclose = (event) => {
+        console.log('🔌 WebSocket disconnected:', event.code, event.reason);
+        clearTimeout(connectionTimeout);
+        setSocketStatus({ connected: false, connecting: false, error: null });
+        
+        if (event.code !== 1000) { // 1000 is normal closure
+          console.log('⚠️ WebSocket closed unexpectedly');
+          addNotification(
+            'Connection Lost',
+            'Lost connection to validator network. You can continue in offline mode.'
+          );
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('❌ WebSocket error:', error);
+        clearTimeout(connectionTimeout);
+        setSocketStatus({
+          connected: false,
+          connecting: false,
+          error: 'Failed to connect to validator network'
+        });
+
+        addNotification(
+          'Network Connection Failed',
+          'Could not connect to the validator network. You can continue without real-time features.'
+        );
+
+        // Move to complete step even if WebSocket fails
+        setTimeout(() => {
+          setStep('complete');
+        }, 2000);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          console.log('📨 Received WebSocket message:', message);
+
+          if (message.url) {
+            console.log('🌐 Received website monitoring task:', message.url);
+            addNotification(
+              'New Monitoring Task',
+              `New website to monitor: ${message.url}`
+            );
+          }
+        } catch (e) {
+          console.error('❌ Error parsing WebSocket message:', e);
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ Error establishing WebSocket connection:', error);
+      setSocketStatus({
+        connected: false,
+        connecting: false,
+        error: 'Failed to establish connection'
+      });
+
+      addNotification(
+        'Network Connection Error',
+        'Could not establish network connection. You can continue without real-time features.'
+      );
+
+      setTimeout(() => {
+        setStep('complete');
+      }, 2000);
+    }
+  };
+
   const handleValidatorRegistration = async () => {
     if (!connected || !publicKey) {
       setStep('connect');
       return;
     }
 
+    console.log('🚀 Starting validator registration process...');
     setLoading(true);
     setLocationError('');
 
     try {
-      // 1. Get user's geolocation with better error handling
+      // 1. Get user's geolocation
       let latitude: number;
       let longitude: number;
 
       try {
+        console.log('📍 Getting user location...');
         const position = await getCurrentPosition();
         latitude = position.coords.latitude;
         longitude = position.coords.longitude;
+        console.log('✅ Location obtained:', { latitude, longitude });
       } catch (locationErr: any) {
         const errorMessage = locationErr.message;
 
@@ -129,17 +278,16 @@ const ValidatorRegistration = () => {
             userFriendlyMessage = 'Unable to get your location. Please try again.';
         }
 
+        console.error('❌ Location error:', errorMessage);
         setLocationError(userFriendlyMessage);
-        addNotification(
-          'Location Error',
-          userFriendlyMessage
-        );
+        addNotification('Location Error', userFriendlyMessage);
         setLoading(false);
         return;
       }
 
-      // 2. Generate a device ID - in a real app, this would be more robust
+      // 2. Generate a device ID
       const deviceId = 'device_' + Math.random().toString(36).substring(2, 10);
+      console.log('🔧 Generated device ID:', deviceId);
 
       // 3. Create a validation message
       const message = `I am registering as a validator with device ${deviceId} at coordinates ${latitude.toFixed(6)},${longitude.toFixed(6)}`;
@@ -149,12 +297,13 @@ const ValidatorRegistration = () => {
         throw new Error("Wallet doesn't support message signing");
       }
 
-      // Convert the message to Uint8Array and sign it
+      console.log('✍️ Signing message with wallet...');
       const messageBytes = new TextEncoder().encode(message);
       const signature = await signMessage(messageBytes);
       const signatureBase58 = bs58.encode(signature);
 
-      // 5. Register as validator
+      // 5. Register as validator with the API
+      console.log('📡 Sending registration to backend...');
       const response = await axios.post('http://127.0.0.1:3001/validator/verify-validator', {
         wallet_address: publicKey.toString(),
         latitude,
@@ -168,27 +317,27 @@ const ValidatorRegistration = () => {
         }
       });
 
+      console.log('📡 Backend response:', response.data);
+
       if (response.data && response.data.status_code === 201) {
+        console.log('✅ Validator registration successful!');
+        
         // Mark user as validated
         setValidated(true);
-        setStep('complete');
 
         addNotification(
           'Validator Registration Successful',
-          'You are now registered as a validator and can contribute to the network.'
+          'You are now registered as a validator. Connecting to the network...'
         );
 
-        await establishWebsocketConnection(response.data.user_id, latitude, longitude);
-
-        // Redirect to home page
-        setTimeout(() => {
-          router.push('/home');
-        }, 2000);
+        // Establish WebSocket connection after successful registration
+        // Use the publicKey as validator ID since that's what we're using
+        await establishWebsocketConnection(publicKey.toString(), latitude, longitude);
       } else {
         throw new Error(response.data.message || 'Failed to register as validator');
       }
     } catch (error) {
-      console.error('Validator registration error:', error);
+      console.error('❌ Validator registration error:', error);
       addNotification(
         'Registration Failed',
         'Could not register as a validator. Please try again.'
@@ -198,66 +347,29 @@ const ValidatorRegistration = () => {
     }
   };
 
-  const establishWebsocketConnection = async (validatorId: string, latitude: number, longitude: number) => {
-    setStep('socket-connecting');
-    setSocketStatus({
-      connected: false,
-      connecting: false,
-      error: null
-    })
-
-    try {
-      const wsUrl = 'ws://127.0.0.1/ws/upgrade';
-      const ws = new WebSocket(wsUrl);
-
-      ws.onopen = () => {
-        console.log("websocket connected");
-        setSocketStatus({ connected: true, connecting: false, error: null })
-      }
-
-      const registrationMessage = {
-        validator_id: validatorId,
-        location: {
-          latitude,
-          longitude
-        }
-      }
-
-      ws.send(JSON.stringify(registrationMessage))
-      console.log("sent validator registration.")
-
-      addNotification('network connection established', 'succesfully connected to the validator network')
-      setTimeout(() => {
-        setStep('complete')
-      }, 2000)
-
-      ws.onmessage = ((event) => {
-        try {
-          const message = JSON.parse(event.data);
-          console.log('recieved message...')
-
-          if (message.url) {
-            console.log('receieved website for monitoring : ', message.url)
-          }
-          addNotification(
-            'New monitoring task',
-            `New website to monitor : ${message.url} `
-          )
-        }
-        catch (e) {
-          console.log('error parsing the message received')
-        }
-      })
-    }
-    catch (error) {
-      console.error('error establishing websocket connection: ', error)
-    }
-  }
-
-
   const handleRetryLocation = () => {
     setLocationError('');
     handleValidatorRegistration();
+  };
+
+  const handleRetryWebSocket = async () => {
+    if (publicKey) {
+      // Get location again for retry
+      try {
+        const position = await getCurrentPosition();
+        await establishWebsocketConnection(
+          publicKey.toString(),
+          position.coords.latitude,
+          position.coords.longitude
+        );
+      } catch (error) {
+        console.error('❌ Failed to retry WebSocket connection:', error);
+        addNotification(
+          'Retry Failed',
+          'Could not establish connection. You can continue without real-time features.'
+        );
+      }
+    }
   };
 
   return (
@@ -365,6 +477,33 @@ const ValidatorRegistration = () => {
                      socketStatus.error ? 'Connection failed' : 'Preparing connection...'}
                   </span>
                 </div>
+
+                {socketStatus.error && (
+                  <div className="space-y-3">
+                    <div className="text-sm text-amber-400 bg-amber-500/20 p-2 rounded">
+                      Network connection failed, but you can still use the platform. 
+                      Real-time features may be limited.
+                    </div>
+                    <div className="flex gap-2 justify-center">
+                      <Button
+                        onClick={handleRetryWebSocket}
+                        size="sm"
+                        variant="outline"
+                        className="border-blue-500 text-blue-400 hover:bg-blue-500/10"
+                        disabled={socketStatus.connecting}
+                      >
+                        Retry Connection
+                      </Button>
+                      <Button
+                        onClick={() => setStep('complete')}
+                        size="sm"
+                        variant="outline"
+                      >
+                        Continue Anyway
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -374,9 +513,35 @@ const ValidatorRegistration = () => {
               <div className="p-4 bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-center">
                 <div className="text-emerald-400 text-4xl mb-2">🎉</div>
                 <h3 className="font-medium text-emerald-400 mb-2">Registration Complete!</h3>
-                <p className="text-sm text-muted-foreground">
-                  You are now registered as a validator. You can start contributing to the network and earning rewards.
+                <p className="text-sm text-muted-foreground mb-3">
+                  You are now registered as a validator and can start contributing to the network.
                 </p>
+
+                {/* WebSocket connection status */}
+                <div className="text-xs bg-secondary/50 rounded p-2 mb-3">
+                  <div className="font-medium mb-1">Network Status:</div>
+                  <div className="flex items-center justify-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      socketStatus.connected ? 'bg-emerald-500' : 
+                      socketStatus.error ? 'bg-amber-500' : 'bg-gray-500'
+                    }`}></div>
+                    <span className="text-muted-foreground">
+                      {socketStatus.connected ? 'Connected to validator network' :
+                       socketStatus.error ? 'Limited connectivity (offline mode)' :
+                       'Network connection not established'}
+                    </span>
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={() => {
+                    console.log('🏠 Redirecting to dashboard');
+                    router.push('/home');
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  Continue to Dashboard
+                </Button>
               </div>
             </motion.div>
           )}

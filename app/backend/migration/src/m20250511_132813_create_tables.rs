@@ -93,13 +93,6 @@ impl MigrationTrait for Migration {
                     .table(WebsiteRegister::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(WebsiteRegister::Id)
-                            .uuid()
-                            .not_null()
-                            .primary_key()
-                            .default(Expr::cust("gen_random_uuid()")), // ✅ Fixed: Use PostgreSQL's UUID generator
-                    )
-                    .col(
                         ColumnDef::new(WebsiteRegister::WebsiteUrl)
                             .string()
                             .not_null()
@@ -222,7 +215,6 @@ enum Validators {
 #[derive(DeriveIden)]
 enum WebsiteRegister {
     Table,
-    Id,
     WebsiteUrl,
     UserId,
     Timestamp,

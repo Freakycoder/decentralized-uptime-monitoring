@@ -47,6 +47,7 @@ const Signup = () => {
       if (response.data.status_code === 200 && response.data.token) {
         localStorage.setItem('authToken', response.data.token);
         localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('isValidator', 'false');
         
         router.push('/home');
       } else {
