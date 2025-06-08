@@ -2,7 +2,9 @@ use std::str::FromStr;
 
 use crate::entities::validator;
 use crate::middlewares::validator_auth::validator_jwt_middleware;
-use crate::types::user::{ValidatorInput, VerifySignatureRequest, VerifyValidatorResponse};
+use crate::types::user::{
+    ValidatorData, ValidatorInput, VerifySignatureRequest, VerifyValidatorResponse,
+};
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
@@ -41,6 +43,7 @@ async fn verify_validator(
         return Json(VerifyValidatorResponse {
             status_code: 500,
             message: format!("Database error occured : {}", db_err),
+            validator_data: None,
         });
     }
 
@@ -48,6 +51,7 @@ async fn verify_validator(
         return Json(VerifyValidatorResponse {
             status_code: 201,
             message: format!("A validator exist from same Device"),
+            validator_data: None,
         });
     }
 
@@ -65,12 +69,18 @@ async fn verify_validator(
             return Json(VerifyValidatorResponse {
                 status_code: 201,
                 message: format!("New validator registered : {}", validator.id),
+                validator_data: Some(ValidatorData {
+                    validator_id: validator.id,
+                    latitude: validator_data.latitude,
+                    longitude: validator_data.longitude,
+                }),
             });
         }
         Err(db_err) => {
             return Json(VerifyValidatorResponse {
                 status_code: 500,
                 message: format!("Db error occured : {}", db_err),
+                validator_data: None,
             });
         }
     }
