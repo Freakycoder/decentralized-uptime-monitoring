@@ -3,14 +3,14 @@ use axum::{
     Router,
     extract::{State, WebSocketUpgrade},
     response::Response,
-    routing::post,
+    routing::get,
 };
 use std::sync::Arc;
 
 
 pub fn websocket_router(manager: Arc<WebSocketManager>) -> Router {
     Router::new()
-        .route("/upgrade", post(websocket_upgrade))
+        .route("/upgrade", get(websocket_upgrade))
         .with_state(manager)
 }
 

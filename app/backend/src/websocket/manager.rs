@@ -1,5 +1,5 @@
 use crate::types::websocket::{
-    ServerMessage, StatusDetails, ValidatorConnection, ValidatorMessage, WebsiteStatus,
+    Location, ServerMessage, StatusDetails, ValidatorConnection, ValidatorMessage, WebsiteStatus,
 };
 use axum::extract::ws::{Message, WebSocket};
 use chrono::{FixedOffset, Utc};
@@ -43,52 +43,36 @@ impl WebSocketManager {
                 // as long as something is there, not sure good or bad message enter the {}
                 match result {
                     Ok(Message::Text(text)) => {
-                        if let Ok(msg) = serde_json::from_str::<ValidatorMessage>(&text) {
-                            match msg {
-                                ValidatorMessage::RegisterValidator {
-                                    validator_id,
-                                    location,
-                                } => {
-                                    println!("Registered validator: {}", validator_id);
+                        println!("raw text message content : {}", text);
+                        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) { // till here we dont know what variant of Value we have.
+                            if let Some(reg_data) = json.get("register_validator") { // we try to figure or confirm over here by using '.' operater for json. if we dont get any value (None), then if block is skipped
+                                if let Some(validator_id) =
+                                    reg_data.get("validator_id").and_then(|v| v.as_str())
+                                {
+                                    println!("registering validator : {}", validator_id);
+                                    let location = reg_data.get("location").and_then(|loc| {
+                                        Some(Location {
+                                            latitude: loc.get("latitude")?.as_f64()?,
+                                            longitude: loc.get("longitude")?.as_f64()?,
+                                        })
+                                    });
+
                                     connections.insert(
                                         connection_id_clone.clone(),
                                         ValidatorConnection {
-                                            validator_id,
-                                            location,
+                                            validator_id: validator_id.to_string(),
+                                            location: location,
                                             connected_at: Utc::now()
                                                 .with_timezone(&FixedOffset::east_opt(0).unwrap()),
                                             last_active: Utc::now()
                                                 .with_timezone(&FixedOffset::east_opt(0).unwrap()),
                                         },
                                     );
+                                    println!("Validator registered {}", validator_id);
                                 }
-                                ValidatorMessage::WebsiteStatus {
-                                    url,
-                                    status,
-                                    response_time,
-                                    timestamp,
-                                    details,
-                                    validator_id,
-                                    latitude,
-                                    longitude,
-                                } => {
-                                    println!("Received website status: {}", url);
-
-                                    if let Err(err) = Self::forward_status_to_api(
-                                        url,
-                                        status,
-                                        response_time,
-                                        timestamp,
-                                        details,
-                                        validator_id,
-                                        latitude,
-                                        longitude,
-                                    )
-                                    .await
-                                    {
-                                        eprintln!("Error forwarding to API: {:?}", err);
-                                    }
-                                }
+                            }
+                            else if let Some(websit_data) = json.get("website_status") {
+                                
                             }
                         }
                     }

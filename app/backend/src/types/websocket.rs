@@ -7,24 +7,30 @@ use crate::websocket::manager::WebSocketManager;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ValidatorMessage {
-    #[serde(rename = "register_validator")]
     RegisterValidator {
-        validator_id: String,
-        #[serde(default)]
-        location: Option<Location>,
+        register_validator: RegisterValidatorData,
     },
-    #[serde(rename = "website_status")]
     WebsiteStatus {
-        url: String,
-        status: WebsiteStatus,
-        response_time: u32,
-        timestamp: String,
-        #[serde(default)]
-        details: Option<StatusDetails>,
-        validator_id: String,
-        latitude: f64,
-        longitude: f64,
+        website_status: WebsiteStatusData,
     },
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RegisterValidatorData {
+    pub validator_id: String,
+    pub location: Option<Location>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WebsiteStatusData {
+    pub url: String,
+    pub status: WebsiteStatus,
+    pub response_time: u32,
+    pub timestamp: String,
+    pub details: Option<StatusDetails>,
+    pub validator_id: String,
+    pub latitude: f64,
+    pub longitude: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -63,7 +69,7 @@ pub struct ServerMessage {
 }
 
 #[derive(Debug, Clone)]
-pub struct AppState{
-    pub db : DatabaseConnection,
-    pub ws_manager : Arc<WebSocketManager>
+pub struct AppState {
+    pub db: DatabaseConnection,
+    pub ws_manager: Arc<WebSocketManager>,
 }

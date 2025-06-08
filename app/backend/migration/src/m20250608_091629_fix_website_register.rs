@@ -26,11 +26,7 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .unique_key(),
                     )
-                    .col(
-                        ColumnDef::new(Users::PasswordHash)
-                            .string()
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(Users::PasswordHash).string().not_null())
                     .col(
                         ColumnDef::new(Users::CreatedAt)
                             .timestamp_with_time_zone()
@@ -93,23 +89,12 @@ impl MigrationTrait for Migration {
                     .table(WebsiteRegister::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(WebsiteRegister::Id)
-                            .uuid()
-                            .not_null()
-                            .primary_key()
-                            .default(Expr::cust("gen_random_uuid()")), // ✅ Fixed: Use PostgreSQL's UUID generator
-                    )
-                    .col(
                         ColumnDef::new(WebsiteRegister::WebsiteUrl)
                             .string()
                             .not_null()
                             .unique_key(),
                     )
-                    .col(
-                        ColumnDef::new(WebsiteRegister::UserId)
-                            .uuid()
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(WebsiteRegister::UserId).uuid().not_null())
                     .col(
                         ColumnDef::new(WebsiteRegister::Timestamp)
                             .timestamp_with_time_zone()
@@ -197,7 +182,6 @@ impl MigrationTrait for Migration {
         Ok(())
     }
 }
-
 #[derive(DeriveIden)]
 enum Users {
     Table,
@@ -222,7 +206,6 @@ enum Validators {
 #[derive(DeriveIden)]
 enum WebsiteRegister {
     Table,
-    Id,
     WebsiteUrl,
     UserId,
     Timestamp,

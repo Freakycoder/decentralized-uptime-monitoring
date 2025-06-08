@@ -114,7 +114,7 @@ const ValidatorRegistration = () => {
       // Fixed WebSocket URL - added missing port number
       const wsUrl = 'ws://127.0.0.1:3001/ws/upgrade';
       console.log('🌐 Connecting to WebSocket:', wsUrl);
-      
+
       const ws = new WebSocket(wsUrl);
       websocketRef.current = ws;
 
@@ -143,7 +143,7 @@ const ValidatorRegistration = () => {
 
         // NOW send the registration message - only after connection is open
         const registrationMessage = {
-          RegisterValidator: {
+          register_validator: {
             validator_id: validatorId,
             location: {
               latitude,
@@ -170,7 +170,7 @@ const ValidatorRegistration = () => {
         console.log('🔌 WebSocket disconnected:', event.code, event.reason);
         clearTimeout(connectionTimeout);
         setSocketStatus({ connected: false, connecting: false, error: null });
-        
+
         if (event.code !== 1000) { // 1000 is normal closure
           console.log('⚠️ WebSocket closed unexpectedly');
           addNotification(
@@ -321,7 +321,7 @@ const ValidatorRegistration = () => {
 
       if (response.data && response.data.status_code === 201) {
         console.log('✅ Validator registration successful!');
-        
+
         // Mark user as validated
         setValidated(true);
 
@@ -468,20 +468,20 @@ const ValidatorRegistration = () => {
                 <p className="text-sm text-muted-foreground mb-4">
                   Establishing real-time connection to the validator network...
                 </p>
-                
+
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                   <span className="text-sm">
-                    {socketStatus.connecting ? 'Connecting to network...' : 
-                     socketStatus.connected ? 'Connected successfully!' :
-                     socketStatus.error ? 'Connection failed' : 'Preparing connection...'}
+                    {socketStatus.connecting ? 'Connecting to network...' :
+                      socketStatus.connected ? 'Connected successfully!' :
+                        socketStatus.error ? 'Connection failed' : 'Preparing connection...'}
                   </span>
                 </div>
 
                 {socketStatus.error && (
                   <div className="space-y-3">
                     <div className="text-sm text-amber-400 bg-amber-500/20 p-2 rounded">
-                      Network connection failed, but you can still use the platform. 
+                      Network connection failed, but you can still use the platform.
                       Real-time features may be limited.
                     </div>
                     <div className="flex gap-2 justify-center">
@@ -521,19 +521,18 @@ const ValidatorRegistration = () => {
                 <div className="text-xs bg-secondary/50 rounded p-2 mb-3">
                   <div className="font-medium mb-1">Network Status:</div>
                   <div className="flex items-center justify-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      socketStatus.connected ? 'bg-emerald-500' : 
-                      socketStatus.error ? 'bg-amber-500' : 'bg-gray-500'
-                    }`}></div>
+                    <div className={`w-2 h-2 rounded-full ${socketStatus.connected ? 'bg-emerald-500' :
+                        socketStatus.error ? 'bg-amber-500' : 'bg-gray-500'
+                      }`}></div>
                     <span className="text-muted-foreground">
                       {socketStatus.connected ? 'Connected to validator network' :
-                       socketStatus.error ? 'Limited connectivity (offline mode)' :
-                       'Network connection not established'}
+                        socketStatus.error ? 'Limited connectivity (offline mode)' :
+                          'Network connection not established'}
                     </span>
                   </div>
                 </div>
 
-                <Button 
+                <Button
                   onClick={() => {
                     console.log('🏠 Redirecting to dashboard');
                     router.push('/home');
