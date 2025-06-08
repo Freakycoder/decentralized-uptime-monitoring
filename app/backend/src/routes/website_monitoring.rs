@@ -5,7 +5,6 @@ use axum::{
     routing:: post,
 };
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
-use uuid::Uuid;
 use crate::types::website::{AddWebsiteInput, AddWebsiteResponse};
 use crate::types::websocket::AppState;
 
