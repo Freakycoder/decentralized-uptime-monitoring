@@ -16,9 +16,7 @@ pub struct Model {
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(has_one = "super::validator::Entity")]
-    Validators,
-    #[sea_orm(has_one = "super::website_register::Entity")]
-    WebsiteRegister
+    Validators
 }
 
 impl ActiveModelBehavior for ActiveModel {}
