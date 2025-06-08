@@ -10,6 +10,13 @@ import { fadeIn, slideUp } from '../../lib/framer-variants';
 import axios from 'axios';
 import { useNotifications } from '../../contexts/NotificationsContext';
 import bs58 from 'bs58';
+import { tr } from 'framer-motion/client';
+
+interface WebSocketConnectionStatus {
+  connected: boolean;
+  connecting: boolean;
+  error: string | null;
+}
 
 const ValidatorRegistration = () => {
   const router = useRouter();
@@ -19,7 +26,12 @@ const ValidatorRegistration = () => {
   const { addNotification } = useNotifications();
   const [loading, setLoading] = useState(false);
   const [locationError, setLocationError] = useState<string>('');
-  const [step, setStep] = useState<'connect' | 'validate' | 'complete'>('connect');
+  const [step, setStep] = useState<'connect' | 'validate' | 'socket-connecting' | 'complete'>('connect');
+  const [socketStatus, setSocketStatus] = useState<WebSocketConnectionStatus>({
+    connected: false,
+    connecting: false,
+    error: null
+  });
 
   // Check if wallet is connected when component mounts or when connection status changes
   useEffect(() => {
@@ -98,7 +110,7 @@ const ValidatorRegistration = () => {
         longitude = position.coords.longitude;
       } catch (locationErr: any) {
         const errorMessage = locationErr.message;
-        
+
         let userFriendlyMessage = '';
         switch (errorMessage) {
           case 'GEOLOCATION_NOT_SUPPORTED':
@@ -116,7 +128,7 @@ const ValidatorRegistration = () => {
           default:
             userFriendlyMessage = 'Unable to get your location. Please try again.';
         }
-        
+
         setLocationError(userFriendlyMessage);
         addNotification(
           'Location Error',
@@ -161,11 +173,12 @@ const ValidatorRegistration = () => {
         setValidated(true);
         setStep('complete');
 
-        // Add a notification
         addNotification(
           'Validator Registration Successful',
           'You are now registered as a validator and can contribute to the network.'
         );
+
+        await establishWebsocketConnection(response.data.user_id, latitude, longitude);
 
         // Redirect to home page
         setTimeout(() => {
@@ -184,6 +197,63 @@ const ValidatorRegistration = () => {
       setLoading(false);
     }
   };
+
+  const establishWebsocketConnection = async (validatorId: string, latitude: number, longitude: number) => {
+    setStep('socket-connecting');
+    setSocketStatus({
+      connected: false,
+      connecting: false,
+      error: null
+    })
+
+    try {
+      const wsUrl = 'ws://127.0.0.1/ws/upgrade';
+      const ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        console.log("websocket connected");
+        setSocketStatus({ connected: true, connecting: false, error: null })
+      }
+
+      const registrationMessage = {
+        validator_id: validatorId,
+        location: {
+          latitude,
+          longitude
+        }
+      }
+
+      ws.send(JSON.stringify(registrationMessage))
+      console.log("sent validator registration.")
+
+      addNotification('network connection established', 'succesfully connected to the validator network')
+      setTimeout(() => {
+        setStep('complete')
+      }, 2000)
+
+      ws.onmessage = ((event) => {
+        try {
+          const message = JSON.parse(event.data);
+          console.log('recieved message...')
+
+          if (message.url) {
+            console.log('receieved website for monitoring : ', message.url)
+          }
+          addNotification(
+            'New monitoring task',
+            `New website to monitor : ${message.url} `
+          )
+        }
+        catch (e) {
+          console.log('error parsing the message received')
+        }
+      })
+    }
+    catch (error) {
+      console.error('error establishing websocket connection: ', error)
+    }
+  }
+
 
   const handleRetryLocation = () => {
     setLocationError('');
@@ -231,7 +301,7 @@ const ValidatorRegistration = () => {
                 <p className="text-sm text-muted-foreground mb-4">
                   Your wallet is connected. Now we need to register you as a validator on the network. This will require your location to help verify your identity.
                 </p>
-                
+
                 {locationError && (
                   <div className="mb-4 p-3 bg-destructive/20 border border-destructive/30 rounded-md">
                     <div className="text-destructive text-sm font-medium mb-2">Location Error</div>
@@ -257,7 +327,7 @@ const ValidatorRegistration = () => {
                     </div>
                   </div>
                 )}
-                
+
                 <Button
                   onClick={handleValidatorRegistration}
                   className="w-full bg-primary"
@@ -265,7 +335,7 @@ const ValidatorRegistration = () => {
                 >
                   {loading ? 'Registering...' : 'Register as Validator'}
                 </Button>
-                
+
                 <div className="mt-3 text-xs text-muted-foreground">
                   <strong>Troubleshooting:</strong> If you're having location issues, please:
                   <ul className="mt-1 ml-4 list-disc">
@@ -274,6 +344,26 @@ const ValidatorRegistration = () => {
                     <li>Ensure location services are enabled on your device</li>
                     <li>Try using HTTPS if you're on HTTP</li>
                   </ul>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {step === 'socket-connecting' && (
+            <motion.div variants={slideUp} className="space-y-4">
+              <div className="p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg">
+                <h3 className="font-medium text-blue-400 mb-2">Step 3: Connecting to Validator Network</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Establishing real-time connection to the validator network...
+                </p>
+                
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-sm">
+                    {socketStatus.connecting ? 'Connecting to network...' : 
+                     socketStatus.connected ? 'Connected successfully!' :
+                     socketStatus.error ? 'Connection failed' : 'Preparing connection...'}
+                  </span>
                 </div>
               </div>
             </motion.div>

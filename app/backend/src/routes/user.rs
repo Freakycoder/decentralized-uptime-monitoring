@@ -38,22 +38,22 @@ async fn signup(
         .await;
 
     if let Err(db_err) = old_user {
+        println!("Some issue occured with finding old user.");
         return Json(SignUpResponse {
             status_code: 500,
             message: format!("Database error occured : {}", db_err),
             token: None,
         });
     }
-    println!("Some issue occured with finding old user.");
 
     if let Some(_) = old_user.unwrap() {
+        println!("user already exist");
         return Json(SignUpResponse {
             status_code: 409, //conflict status code
             message: format!("User already exist, please SignIn"),
             token: None,
         });
     }
-    println!("user already exist");
 
     let new_user= user::ActiveModel {
         email: Set(email),
@@ -61,7 +61,6 @@ async fn signup(
         ..Default::default()
     }; // this part is just creating a record to insert into db
     println!("creating new user record.");
-    println!("preparing to insert user...");
 
     match new_user.insert(&db).await {
         // in 'new_user.insert(&db).await' we actually insert the record into db

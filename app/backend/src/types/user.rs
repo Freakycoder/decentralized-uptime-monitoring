@@ -33,9 +33,16 @@ pub struct ValidatorInput{
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VerifyValidatorResponse{
     pub status_code : u32,
-    pub message : String
+    pub message : String,
+    pub validator_data : Option<ValidatorData>
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ValidatorData{
+   pub validator_id : Uuid,
+   pub latitude : f64,
+   pub longitude : f64
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VerifySignatureRequest{
