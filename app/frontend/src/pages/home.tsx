@@ -12,7 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 const Home = () => {
   const [mounted, setMounted] = useState(false);
   const { isAuthenticated, isValidated } = useAuth();
-  
+
   // After mounting, we can safely use client-side APIs
   useEffect(() => {
     setMounted(true);
@@ -38,10 +38,10 @@ const Home = () => {
     );
   }
 
-  return (
+  return <>
+    <WelcomeBanner />
     <Layout title="Dashboard">
-      {/* Welcome banner */}
-      <WelcomeBanner />
+
 
       {/* Stats overview */}
       <div className="mb-6">
@@ -70,7 +70,7 @@ const Home = () => {
         </motion.div>
       </div>
     </Layout>
-  );
+  </>;
 };
 
 export default Home;
