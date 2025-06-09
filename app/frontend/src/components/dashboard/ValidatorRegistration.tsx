@@ -41,16 +41,6 @@ const ValidatorRegistration = () => {
     }
   }, [connected, publicKey]);
 
-  // Cleanup WebSocket connection on component unmount
-  useEffect(() => {
-    return () => {
-      if (websocketRef.current) {
-        console.log('🧹 Cleaning up WebSocket connection');
-        websocketRef.current.close();
-      }
-    };
-  }, []);
-
   const handleConnectWallet = async () => {
     if (!connected) {
       console.log('💼 Opening wallet modal');
@@ -106,42 +96,21 @@ const ValidatorRegistration = () => {
     setStep('socket-connecting');
     setSocketStatus({
       connected: false,
-      connecting: true, // Set to true when starting connection
+      connecting: true,
       error: null
     });
 
     try {
-      // Fixed WebSocket URL - added missing port number
       const wsUrl = 'ws://127.0.0.1:3001/ws/upgrade';
       console.log('🌐 Connecting to WebSocket:', wsUrl);
 
       const ws = new WebSocket(wsUrl);
       websocketRef.current = ws;
 
-      // Set connection timeout
-      const connectionTimeout = setTimeout(() => {
-        console.log('⏰ WebSocket connection timeout');
-        if (ws.readyState === WebSocket.CONNECTING) {
-          ws.close();
-          setSocketStatus({
-            connected: false,
-            connecting: false,
-            error: 'Connection timeout'
-          });
-          addNotification(
-            'Connection Timeout',
-            'WebSocket connection timed out. You can continue without real-time features.'
-          );
-          setTimeout(() => setStep('complete'), 1000);
-        }
-      }, 10000); // 10 second timeout
-
       ws.onopen = () => {
         console.log('✅ WebSocket connected successfully');
-        clearTimeout(connectionTimeout);
         setSocketStatus({ connected: true, connecting: false, error: null });
 
-        // NOW send the registration message - only after connection is open
         const registrationMessage = {
           register_validator: {
             validator_id: validatorId,
@@ -152,37 +121,35 @@ const ValidatorRegistration = () => {
           }
         };
 
-        console.log('📨 Sending validator registration:', registrationMessage);
-        ws.send(JSON.stringify(registrationMessage));
+        console.log('📨 Preparing to send registration message...');
+        console.log('📋 Message object:', registrationMessage);
+
+        const messageString = JSON.stringify(registrationMessage);
+
+        // Add a small delay and try to send
+        setTimeout(() => {
+          console.log('📤 About to send message...');
+          try {
+            ws.send(messageString);
+            console.log('✅ Message sent successfully!');
+          } catch (sendError) {
+            console.error('❌ Error sending message:', sendError);
+          }
+        }, 500);
 
         addNotification(
           'Network Connection Established',
           'Successfully connected to the validator network.'
         );
 
-        // Move to complete step after successful connection
+        // Move to complete step after sending message
         setTimeout(() => {
           setStep('complete');
-        }, 2000);
-      };
-
-      ws.onclose = (event) => {
-        console.log('🔌 WebSocket disconnected:', event.code, event.reason);
-        clearTimeout(connectionTimeout);
-        setSocketStatus({ connected: false, connecting: false, error: null });
-
-        if (event.code !== 1000) { // 1000 is normal closure
-          console.log('⚠️ WebSocket closed unexpectedly');
-          addNotification(
-            'Connection Lost',
-            'Lost connection to validator network. You can continue in offline mode.'
-          );
-        }
+        }, 3000);
       };
 
       ws.onerror = (error) => {
         console.error('❌ WebSocket error:', error);
-        clearTimeout(connectionTimeout);
         setSocketStatus({
           connected: false,
           connecting: false,
@@ -194,10 +161,6 @@ const ValidatorRegistration = () => {
           'Could not connect to the validator network. You can continue without real-time features.'
         );
 
-        // Move to complete step even if WebSocket fails
-        setTimeout(() => {
-          setStep('complete');
-        }, 2000);
       };
 
       ws.onmessage = (event) => {
@@ -229,10 +192,6 @@ const ValidatorRegistration = () => {
         'Network Connection Error',
         'Could not establish network connection. You can continue without real-time features.'
       );
-
-      setTimeout(() => {
-        setStep('complete');
-      }, 2000);
     }
   };
 
@@ -309,8 +268,6 @@ const ValidatorRegistration = () => {
         latitude,
         longitude,
         device_id: deviceId,
-        signature: signatureBase58,
-        message: message
       }, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`
@@ -332,7 +289,7 @@ const ValidatorRegistration = () => {
 
         // Establish WebSocket connection after successful registration
         // Use the publicKey as validator ID since that's what we're using
-        await establishWebsocketConnection(publicKey.toString(), latitude, longitude);
+        await establishWebsocketConnection(response.data.validator_data.validator_id, latitude, longitude);
       } else {
         throw new Error(response.data.message || 'Failed to register as validator');
       }
@@ -522,7 +479,7 @@ const ValidatorRegistration = () => {
                   <div className="font-medium mb-1">Network Status:</div>
                   <div className="flex items-center justify-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${socketStatus.connected ? 'bg-emerald-500' :
-                        socketStatus.error ? 'bg-amber-500' : 'bg-gray-500'
+                      socketStatus.error ? 'bg-amber-500' : 'bg-gray-500'
                       }`}></div>
                     <span className="text-muted-foreground">
                       {socketStatus.connected ? 'Connected to validator network' :
