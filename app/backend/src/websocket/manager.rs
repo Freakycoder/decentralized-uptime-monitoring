@@ -1,5 +1,5 @@
 use crate::types::websocket::{
-    Location, ServerMessage, StatusDetails, ValidatorConnection, ValidatorMessage, WebsiteStatus,
+    Location, ServerMessage, StatusDetails, ValidatorConnection, WebsiteStatus,
 };
 use axum::extract::ws::{Message, WebSocket};
 use chrono::{FixedOffset, Utc};
@@ -37,19 +37,34 @@ impl WebSocketManager {
         let (mpsc_tx, mut mpsc_rx) = mpsc::channel::<Message>(100);
 
         // Receiving from Validator
+        // Replace the receive_task in manager.rs with this enhanced debugging version:
+
+        // Replace the receive_task in manager.rs with this version:
+
         let receive_task = tokio::spawn(async move {
+            println!(
+                "🔄 Starting receive task for connection_id: {}",
+                connection_id_clone
+            );
+
             while let Some(result) = ws_receiver.next().await {
-                // "ws_receiver.next().await" recieves messages and its return type is Result wrapped in Option, like this - Option<Result<Message,Error>>. So we're running a loop as long as we've Some(...) of message, if its none then dont enter {} and do anything.
-                // as long as something is there, not sure good or bad message enter the {}
+                println!("📨 GOT SOMETHING from validator: {}", connection_id_clone);
+
                 match result {
                     Ok(Message::Text(text)) => {
-                        println!("raw text message content : {}", text);
-                        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) { // till here we dont know what variant of Value we have.
-                            if let Some(reg_data) = json.get("register_validator") { // we try to figure or confirm over here by using '.' operater for json. if we dont get any value (None), then if block is skipped
+                        println!("📝 RAW TEXT MESSAGE: '{}'", text);
+
+                        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) {
+                            println!("✅ Successfully parsed as JSON");
+
+                            if let Some(reg_data) = json.get("register_validator") {
+                                println!("🎯 Found register_validator field!");
+
                                 if let Some(validator_id) =
                                     reg_data.get("validator_id").and_then(|v| v.as_str())
                                 {
-                                    println!("registering validator : {}", validator_id);
+                                    println!("🆔 Registering validator: {}", validator_id);
+
                                     let location = reg_data.get("location").and_then(|loc| {
                                         Some(Location {
                                             latitude: loc.get("latitude")?.as_f64()?,
@@ -68,26 +83,42 @@ impl WebSocketManager {
                                                 .with_timezone(&FixedOffset::east_opt(0).unwrap()),
                                         },
                                     );
-                                    println!("Validator registered {}", validator_id);
+                                    println!(
+                                        "✅ Validator registered successfully: {}",
+                                        validator_id
+                                    );
+                                    println!(
+                                        "Currently registered validators are: {:?}",
+                                        connections
+                                    )
+                                } else {
+                                    println!("❌ No validator_id found");
                                 }
+                            } else {
+                                println!("❌ No register_validator field found");
+                                println!(
+                                    "🔍 Available keys: {:?}",
+                                    json.as_object().map(|obj| obj.keys().collect::<Vec<_>>())
+                                );
                             }
-                            else if let Some(websit_data) = json.get("website_status") {
-                                
-                            }
+                        } else {
+                            println!("❌ Failed to parse as JSON");
                         }
-                    }
-                    Ok(Message::Close(_)) => {
-                        // when a validator client closes the socket (disconnects/refreshes browser/turns off device) the server recieves close message
-                        println!("Validator disconnected: {}", connection_id_clone);
-                        break;
-                    }
+                    },
+                    Ok(_) => {},
                     Err(e) => {
-                        eprintln!("WebSocket error: {:?}", e);
+                        eprintln!("❌ WebSocket error receiving message: {:?}", e);
                         break;
                     }
-                    _ => {} // _ means anything else/default case
                 }
+
+                println!("🔄 Finished processing message, waiting for next...");
             }
+
+            println!(
+                "🧹 Receive task ending for connection: {}",
+                connection_id_clone
+            );
             connections.remove(&connection_id_clone);
         });
 
