@@ -120,7 +120,7 @@ pub fn create_hash(unhashed_pass: String) -> String {
 
 pub fn generate_jwt(user_id: &str) -> String {
     let expiration = Utc::now()
-        .checked_add_signed(Duration::hours(24))
+        .checked_add_signed(Duration::hours(3))
         .expect("valid timestamp")
         .timestamp() as usize;
 
