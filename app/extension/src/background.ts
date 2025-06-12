@@ -4,7 +4,17 @@ interface MonitoredWebsites {
   url: string,
   startTime: number,
   timeouts: any[],
-  checkCount: number // how much times the website is pinged
+  checkCount: number
+}
+
+interface PerformanceData {
+  dnsLookup: number,
+  tcpConnection: number,
+  tlsHandshake: number,
+  ttfb: number,
+  contentDownload: number,
+  totalDuration: number,
+  statusCode: number
 }
 
 export class BackgroundService {
@@ -13,7 +23,6 @@ export class BackgroundService {
   private readonly INTERVAL = 10 * 60 * 1000;
   private readonly TOTAL_DURATION = 80 * 60 * 1000;
   private readonly SERVER_ENDPOINT = 'http://127.0.0.1:3001'
-
 
   constructor() {
     this.setupMessageListener();
@@ -25,23 +34,42 @@ export class BackgroundService {
         this.startMonitoring(message.url)
         sendResponse({ success: true })
       }
+      else if (message.action === 'PERF_DATA' && message.url && message.data) {
+        // Get performance data from content script
+        const perfData = message.data.pingData[message.url] as PerformanceData;
+
+        const payload = {
+          url: message.url,
+          timestamp: new Date().toISOString(),
+          runNumber: message.runNumber,
+          totalRuns: message.totalRuns,
+          dnsLookup: perfData.dnsLookup,
+          tcpConnection: perfData.tcpConnection,
+          tlsHandshake: perfData.tlsHandshake,
+          ttfb: perfData.ttfb,
+          contentDownload: perfData.contentDownload,
+          totalDuration: perfData.totalDuration,
+          statusCode: perfData.statusCode,
+
+          // Background script metadata
+          extensionSessionId: this.generateSessionId(),
+          checkCount: this.monitoredWebsites[new URL(message.url).origin]?.checkCount || 0
+        }
+
+        try {
+          axios.post(`${this.SERVER_ENDPOINT}/extension/monitoring-results`, payload)
+          console.log("Performance data sent to server:", payload)
+        }
+        catch (err) {
+          console.error("Failed to send performance data:", err)
+        }
+        sendResponse({ success: true })
+      }
+      return true;
     })
   }
 
-  private async pingWebsite(url: string) {
-    const start = Date.now();
-    let status = 'down';
-
-    try {
-      await axios.get(url);
-      status = 'up'
-    }
-    catch (e) {
-      console.error(`Ping failed for ${url}`)
-    }
-  }
   private startMonitoring(url: string) {
-
     const domain = new URL(url);
 
     if (this.monitoredWebsites[domain.origin]) {
@@ -55,42 +83,23 @@ export class BackgroundService {
       checkCount: 0,
       timeouts: []
     }
-    
+
     for (let i = 0; i < 8; i++) {
       const timeoutID = setTimeout(() => {
         chrome.tabs.create({ url: site.url, active: false })
         site.checkCount++;
-        const startTime = Date.now();
-        site.startTime = startTime;
+        site.startTime = Date.now();
       }, i * this.INTERVAL)
       site.timeouts.push(timeoutID)
     }
-    
+
     this.monitoredWebsites[domain.origin] = site;
     console.log(`started monitoring : ${url}`)
   }
 
-  private setupWebRequest(){
-    chrome.webRequest.onCompleted.addListener((requestDetails) => {
-      const domain = new URL(requestDetails.url);
-
-      if(!this.monitoredWebsites[domain.origin]){ // confirming that the domain which we recieved through evemt listener in present in monitoredwebsites Record.
-        return
-      }
-
-      const domainDetails = this.monitoredWebsites[domain.origin];
-      const timing = requestDetails.timeStamp - domainDetails.startTime;
-      const payload : MonitoredWebsites = {
-        url : domain.origin,
-        
-      }
-      try{
-        const response = axios.post(`${this.SERVER_ENDPOINT}`, {
-
-        })
-      }
-
-    })
+  private generateSessionId(): string {
+    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   }
-
 }
+
+new BackgroundService()
