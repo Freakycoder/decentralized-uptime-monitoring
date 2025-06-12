@@ -21,7 +21,6 @@ export class BackgroundService {
 
   private monitoredWebsites: Record<string, MonitoredWebsites> = {};
   private readonly INTERVAL = 10 * 60 * 1000;
-  private readonly TOTAL_DURATION = 80 * 60 * 1000;
   private readonly SERVER_ENDPOINT = 'http://127.0.0.1:3001'
 
   constructor() {
