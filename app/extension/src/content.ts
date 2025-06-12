@@ -162,5 +162,3 @@ function extractPerformanceData(entry: PerformanceResourceTiming | PerformanceNa
         statusCode: statusCode
     };
 }
-
-export { performanceData, performanceDetail };

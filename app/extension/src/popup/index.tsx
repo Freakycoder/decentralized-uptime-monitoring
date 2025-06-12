@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createRoot } from 'react-dom/client'
 import { motion } from 'framer-motion'
 
 interface MonitoredWebsite {
@@ -10,14 +11,12 @@ interface MonitoredWebsite {
   lastUpdate: string
 }
 
-const Popup: React.FC = () => {
+const App: React.FC = () => {
   const [monitoredSites, setMonitoredSites] = useState<MonitoredWebsite[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadMonitoredSites()
-    
-    // Refresh data every 5 seconds
     const interval = setInterval(loadMonitoredSites, 5000)
     return () => clearInterval(interval)
   }, [])
@@ -25,7 +24,6 @@ const Popup: React.FC = () => {
   const loadMonitoredSites = () => {
     chrome.runtime.sendMessage({ action: 'GET_MONITORED_SITES' }, (response) => {
       if (response && response.sites) {
-        // Get last 4 monitored sites
         const recentSites = response.sites.slice(-4).reverse()
         setMonitoredSites(recentSites)
       }
@@ -40,21 +38,10 @@ const Popup: React.FC = () => {
           action: 'MONITOR_URL', 
           url: tabs[0].url 
         }, () => {
-          // Refresh the list after adding
           setTimeout(loadMonitoredSites, 1000)
         })
       }
     })
-  }
-
-  const heartbeatAnimation = {
-    scale: [1, 1.2, 1],
-    opacity: [1, 0.7, 1],
-    transition: {
-      duration: 1.5,
-      repeat: Infinity,
-      ease: "easeInOut"
-    }
   }
 
   if (loading) {
@@ -111,11 +98,18 @@ const Popup: React.FC = () => {
                 transition={{ delay: index * 0.1 }}
                 className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg hover:bg-gray-750 transition-colors"
               >
-                {/* Status Indicator */}
                 <div className="relative">
                   {site.isActive ? (
                     <motion.div
-                      animate={heartbeatAnimation}
+                      animate={{
+                        scale: [1, 1.2, 1],
+                        opacity: [1, 0.7, 1]
+                      }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
                       className="w-3 h-3 bg-green-500 rounded-full"
                     />
                   ) : (
@@ -123,7 +117,6 @@ const Popup: React.FC = () => {
                   )}
                 </div>
 
-                {/* Website Info */}
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-white truncate">
                     {site.domain}
@@ -135,7 +128,6 @@ const Popup: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Time Badge */}
                 <div className="text-xs text-gray-500">
                   {formatTimeAgo(site.lastUpdate)}
                 </div>
@@ -163,7 +155,6 @@ const Popup: React.FC = () => {
   )
 }
 
-// Helper function to format time ago
 function formatTimeAgo(timestamp: string): string {
   const now = Date.now()
   const time = new Date(timestamp).getTime()
@@ -176,4 +167,11 @@ function formatTimeAgo(timestamp: string): string {
   return `${Math.floor(diffMins / 1440)}d`
 }
 
-export default Popup
+// Mount it
+const container = document.getElementById('popup-root')
+if (container) {
+  const root = createRoot(container)
+  root.render(<App />)
+} else {
+  console.error('Popup root element not found')
+}

@@ -6,8 +6,7 @@
   "permissions": [
     "activeTab",
     "storage",
-    "background",
-    "webRequest"
+    "background"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -23,7 +22,7 @@
     }
   ],
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "popup/popup.html",
     "default_title": "Data Contribution",
     "default_icon": {
       "16": "icons/icon16.png",

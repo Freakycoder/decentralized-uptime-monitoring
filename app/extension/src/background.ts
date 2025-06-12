@@ -64,6 +64,19 @@ export class BackgroundService {
         }
         sendResponse({ success: true })
       }
+      else if (message.action === 'GET_MONITORED_SITES') {
+        // Return monitored sites for popup UI
+        const sites = Object.values(this.monitoredWebsites).map(site => ({
+          url: site.url,
+          domain: new URL(site.url).hostname,
+          isActive: site.checkCount < 8 && site.timeouts.length > 0,
+          checkCount: site.checkCount,
+          startTime: site.startTime,
+          lastUpdate: new Date().toISOString()
+        }))
+
+        sendResponse({ sites })
+      }
       return true;
     })
   }
