@@ -5,9 +5,7 @@
   "description": "Monitor websites and contribute data to earn SOL rewards",
   "permissions": [
     "activeTab",
-    "storage",
-    "background",
-    "tabs"
+    "storage"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -18,13 +16,18 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "matches": [
+        "http://localhost:*/*",
+        "http://127.0.0.1:*/*",
+        "https://yourdashboard.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
     }
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Data Contribution"
+    "default_title": "Data Contribution Monitor"
   },
   "web_accessible_resources": [
     {
