@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { motion } from 'framer-motion'
-import './popup.css'  // Add this import!
 
 interface MonitoredWebsite {
   url: string
