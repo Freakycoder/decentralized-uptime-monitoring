@@ -1,4 +1,6 @@
 use crate::entities::website_register;
+use crate::middlewares::validator_auth::validator_jwt_middleware;
+use axum::middleware;
 use axum::{
     Json, Router,
     extract::State,
@@ -11,7 +13,7 @@ use crate::types::websocket::AppState;
 
 
 pub fn website_router() -> Router<AppState> {
-    Router::new().route("/add", post(website_to_add))
+    Router::new().route("/add", post(website_to_add).layer(middleware::from_fn(validator_jwt_middleware)))
 }
 
 #[axum::debug_handler]
@@ -20,6 +22,7 @@ async fn website_to_add(
     Json(website_data): Json<AddWebsiteInput>,
 ) -> Json<AddWebsiteResponse> {
     let url = website_data.url_to_monitor;
+    let user_id  = website_data.user_id;
     let db = state.db;
     let ws = state.ws_manager;
 
@@ -44,6 +47,7 @@ async fn website_to_add(
 
     let new_url = website_register::ActiveModel {
         website_url: Set(url.clone()),
+        user_id : Set(user_id),
         ..Default::default()
     };
 
