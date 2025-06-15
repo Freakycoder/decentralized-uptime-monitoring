@@ -16,7 +16,9 @@ pub struct Model {
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(has_one = "super::validator::Entity")]
-    Validators
+    Validators,
+    #[sea_orm(has_one = "super::website_register::Entity")]
+    WebsiteRegister,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
@@ -24,5 +26,11 @@ impl ActiveModelBehavior for ActiveModel {}
 impl Related<super::validator::Entity> for Entity {
     fn to() -> RelationDef {
         super::validator::Relation::Users.def().rev()
+    }
+}
+
+impl Related<super::user::Entity> for super::website_register::Entity {
+    fn to() -> RelationDef {
+        super::website_register::Relation::Users.def()
     }
 }
