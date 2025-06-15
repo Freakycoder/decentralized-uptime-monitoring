@@ -8,14 +8,15 @@ import { fadeIn, slideUp, staggerContainer } from '../lib/framer-variants';
 import { Globe, Clock, Zap, CheckCircle, XCircle, AlertCircle, Play } from 'lucide-react';
 
 // Import our mock data
-import { 
-  DEMO_MONITORING_SESSIONS, 
-  MonitoringSession, 
+import {
+  DEMO_MONITORING_SESSIONS,
+  MonitoringSession,
   SegmentStatus,
   getSessionTimeRemaining,
   getOverallSessionStatus,
-  simulateSegmentCompletion 
+  simulateSegmentCompletion
 } from '../types';
+import axios from 'axios';
 
 // Enhanced monitoring ring with proper segmentation and glow effects
 interface MonitoringRingProps {
@@ -24,7 +25,6 @@ interface MonitoringRingProps {
 
 const MonitoringRing: React.FC<MonitoringRingProps> = ({ session }) => {
   const [currentTime, setCurrentTime] = useState(Date.now());
-  
   // Update time every second to show real-time progress
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(Date.now()), 1000);
@@ -36,21 +36,21 @@ const MonitoringRing: React.FC<MonitoringRingProps> = ({ session }) => {
   const centerY = 80;
   const radius = 50;
   const strokeWidth = 8;
-  
+
   // Calculate segments with very large gaps for crystal clear visual separation
   const totalSegments = 8;
   const gapAngle = 15; // 15 degrees gap between segments - very clear visual separation
   const segmentAngle = (360 - (totalSegments * gapAngle)) / totalSegments; // Remaining space divided by segments
-  
+
   const segments = [];
-  
+
   for (let i = 0; i < totalSegments; i++) {
     // Calculate start and end angles with gaps
     const startAngle = (i * (segmentAngle + gapAngle)) - 90; // Start from top (-90 degrees)
     const endAngle = startAngle + segmentAngle;
-    
+
     const segment = session.segments[i];
-    
+
     segments.push({
       id: i,
       startAngle,
@@ -59,7 +59,7 @@ const MonitoringRing: React.FC<MonitoringRingProps> = ({ session }) => {
       isActive: segment.status === 'active'
     });
   }
-  
+
   // Convert angle to coordinates on the circle
   const polarToCartesian = (centerX: number, centerY: number, radius: number, angleInDegrees: number) => {
     const angleInRadians = (angleInDegrees) * Math.PI / 180.0;
@@ -68,18 +68,18 @@ const MonitoringRing: React.FC<MonitoringRingProps> = ({ session }) => {
       y: centerY + (radius * Math.sin(angleInRadians))
     };
   };
-  
+
   // Create SVG arc path for segments with proper gaps
   const describeArc = (centerX: number, centerY: number, radius: number, startAngle: number, endAngle: number) => {
     const start = polarToCartesian(centerX, centerY, radius, startAngle);
     const end = polarToCartesian(centerX, centerY, radius, endAngle);
-    
+
     const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
-    
+
     // Create a path that doesn't connect to center - just an arc
     return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${end.x} ${end.y}`;
   };
-  
+
   // Get base color for each segment status (removed amber)
   const getSegmentColor = (status: SegmentStatus) => {
     switch (status) {
@@ -140,11 +140,11 @@ const MonitoringRing: React.FC<MonitoringRingProps> = ({ session }) => {
           strokeWidth="1"
           className="opacity-30"
         />
-        
+
         {/* Render each segment with proper spacing and glow effects */}
         {segments.map((segment) => {
           const glowSettings = getGlowSettings(segment.status);
-          
+
           return (
             <g key={segment.id}>
               {/* Glow effect layer - rendered behind the main segment */}
@@ -159,18 +159,18 @@ const MonitoringRing: React.FC<MonitoringRingProps> = ({ session }) => {
                   animate={
                     glowSettings.animationType === 'blink'
                       ? {
-                          // Blinking animation for active monitoring
-                          opacity: [0.2, 0.8, 0.2, 0.8, 0.2],
-                          filter: [
-                            `drop-shadow(0 0 4px ${glowSettings.shadowColor})`,
-                            `drop-shadow(0 0 16px ${glowSettings.shadowColor})`,
-                            `drop-shadow(0 0 4px ${glowSettings.shadowColor})`,
-                            `drop-shadow(0 0 16px ${glowSettings.shadowColor})`,
-                            `drop-shadow(0 0 4px ${glowSettings.shadowColor})`
-                          ]
-                        }
+                        // Blinking animation for active monitoring
+                        opacity: [0.2, 0.8, 0.2, 0.8, 0.2],
+                        filter: [
+                          `drop-shadow(0 0 4px ${glowSettings.shadowColor})`,
+                          `drop-shadow(0 0 16px ${glowSettings.shadowColor})`,
+                          `drop-shadow(0 0 4px ${glowSettings.shadowColor})`,
+                          `drop-shadow(0 0 16px ${glowSettings.shadowColor})`,
+                          `drop-shadow(0 0 4px ${glowSettings.shadowColor})`
+                        ]
+                      }
                       : glowSettings.animationType === 'glow'
-                      ? {
+                        ? {
                           // Steady glow animation for completed states
                           opacity: [0.4, 0.6, 0.4],
                           filter: [
@@ -179,18 +179,18 @@ const MonitoringRing: React.FC<MonitoringRingProps> = ({ session }) => {
                             `drop-shadow(0 0 6px ${glowSettings.shadowColor})`
                           ]
                         }
-                      : { opacity: 0 }
+                        : { opacity: 0 }
                   }
                   transition={
                     glowSettings.animationType === 'blink'
                       ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
                       : glowSettings.animationType === 'glow'
-                      ? { duration: 3, repeat: Infinity, ease: "easeInOut" }
-                      : { duration: 0 }
+                        ? { duration: 3, repeat: Infinity, ease: "easeInOut" }
+                        : { duration: 0 }
                   }
                 />
               )}
-              
+
               {/* Main segment path */}
               <path
                 d={describeArc(centerX, centerY, radius, segment.startAngle, segment.endAngle)}
@@ -201,14 +201,14 @@ const MonitoringRing: React.FC<MonitoringRingProps> = ({ session }) => {
                 className="transition-all duration-300"
                 style={{
                   filter: glowSettings.shouldAnimate && glowSettings.animationType === 'glow'
-                    ? `drop-shadow(0 0 3px ${glowSettings.shadowColor})` 
+                    ? `drop-shadow(0 0 3px ${glowSettings.shadowColor})`
                     : 'none'
                 }}
               />
             </g>
           );
         })}
-        
+
         {/* Center status indicator with improved styling */}
         <circle
           cx={centerX}
@@ -218,7 +218,7 @@ const MonitoringRing: React.FC<MonitoringRingProps> = ({ session }) => {
           stroke="rgba(255, 255, 255, 0.1)"
           strokeWidth="2"
         />
-        
+
         {/* Center icon based on overall status */}
         <foreignObject x="62" y="62" width="36" height="36">
           <div className="flex items-center justify-center w-full h-full">
@@ -242,7 +242,7 @@ const MonitoringRing: React.FC<MonitoringRingProps> = ({ session }) => {
           </div>
         </foreignObject>
       </svg>
-      
+
       {/* Progress text overlay positioned below the ring */}
       <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-center">
         <div className="text-xs text-muted-foreground">
@@ -258,19 +258,20 @@ const MonitoringRing: React.FC<MonitoringRingProps> = ({ session }) => {
 };
 
 // Main monitoring dashboard component properly wrapped in layout
-const WebsiteMonitorPage: React.FC = () => {
+const WebsiteMonitorPage = () => {
   // State for managing monitoring sessions
   const [monitoringSessions, setMonitoringSessions] = useState<MonitoringSession[]>(DEMO_MONITORING_SESSIONS);
-  
+
   // State for new monitoring form
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+    const [websiteResponse, setWebsiteResponse] = useState<string>();
 
   // Simulate real-time updates (in production, this would come from WebSocket)
   useEffect(() => {
     const interval = setInterval(() => {
-      setMonitoringSessions(sessions => 
+      setMonitoringSessions(sessions =>
         sessions.map(session => {
           // Simulate segment completion every 10 seconds for demo (would be 10 minutes in production)
           if (session.isActive && Math.random() < 0.08) { // 8% chance each second for demo purposes
@@ -295,19 +296,24 @@ const WebsiteMonitorPage: React.FC = () => {
 
   const handleStartMonitoring = async () => {
     setError('');
-    
+
     if (!websiteUrl.trim()) {
       setError('Please enter a website URL');
       return;
     }
-    
+
     if (!validateUrl(websiteUrl)) {
       setError('Please enter a valid URL (must start with http:// or https://)');
       return;
     }
 
     setLoading(true);
-    
+
+    const response = await axios.post('http://127.0.0.1:3001/website-monitor/add', {
+      url_to_monitor: websiteUrl
+    })
+    setWebsiteResponse(response.data.message);
+
     // Simulate API call to start monitoring
     setTimeout(() => {
       const newSession: MonitoringSession = {
@@ -338,7 +344,7 @@ const WebsiteMonitorPage: React.FC = () => {
           }))
         ]
       };
-      
+
       setMonitoringSessions([newSession, ...monitoringSessions]);
       setWebsiteUrl('');
       setLoading(false);
@@ -355,11 +361,11 @@ const WebsiteMonitorPage: React.FC = () => {
         default: return 'Monitoring Complete';
       }
     }
-    
+
     if (session.currentSegment === 0) {
       return 'Starting First Check...';
     }
-    
+
     return `Monitoring Segment ${session.currentSegment + 1}/8`;
   };
 
@@ -373,7 +379,7 @@ const WebsiteMonitorPage: React.FC = () => {
         default: return <Clock className="w-4 h-4 text-gray-500" />;
       }
     }
-    
+
     return <Zap className="w-4 h-4 text-blue-500" />;
   };
 
@@ -392,7 +398,7 @@ const WebsiteMonitorPage: React.FC = () => {
             <h1 className="text-3xl font-bold">Website Monitoring</h1>
           </div>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Monitor your websites with our 8-segment monitoring system. 
+            Monitor your websites with our 8-segment monitoring system.
             Each segment monitors your site for 10 minutes with real-time visual feedback.
           </p>
         </motion.div>
@@ -422,6 +428,7 @@ const WebsiteMonitorPage: React.FC = () => {
                       onChange={(e) => setWebsiteUrl(e.target.value)}
                       className="text-lg"
                     />
+                    <p className='w-full text-white mt-4'>{websiteResponse}</p>
                   </div>
 
                   {error && (
@@ -430,7 +437,7 @@ const WebsiteMonitorPage: React.FC = () => {
                     </div>
                   )}
 
-                  <Button 
+                  <Button
                     onClick={handleStartMonitoring}
                     disabled={loading}
                     className="w-full bg-blue-600 hover:bg-blue-700"
