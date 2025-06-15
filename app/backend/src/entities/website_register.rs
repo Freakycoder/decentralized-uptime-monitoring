@@ -7,12 +7,16 @@ pub struct Model{
     pub id: Uuid,
     #[sea_orm(unique)]
     pub website_url: String,
+    pub user_id : Uuid,
     #[sea_orm(default_value = "CURRENT_TIMESTAMP")]
     pub timestamp: DateTimeWithTimeZone,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+     #[sea_orm(belongs_to = "super::user::Entity", from = "Column::UserId", to = "super::user::Column::Id")]
+    Users
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
