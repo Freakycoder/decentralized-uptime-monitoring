@@ -2,34 +2,24 @@ import React, { useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { motion } from 'framer-motion'
 
-interface MonitoredWebsite {
-  url: string
-  domain: string
-  isActive: boolean
-  checkCount: number
-  startTime: number
-  lastUpdate: string
+interface MonitoredWebsite { 
+  [url : string] : {
+  status: boolean
+  count: number
+  startedAt: number}
 }
 
 const App: React.FC = () => {
-  const [monitoredSites, setMonitoredSites] = useState<MonitoredWebsite[]>([])
-  const [loading, setLoading] = useState(true)
-
+  const [monitoredSites, setMonitoredSites] = useState<MonitoredWebsite>({})
+  const [loading, setLoading] = useState(true);
+  
   useEffect(() => {
-    loadMonitoredSites()
-    const interval = setInterval(loadMonitoredSites, 5000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const loadMonitoredSites = () => {
-    chrome.runtime.sendMessage({ action: 'GET_MONITORED_SITES' }, (response) => {
-      if (response && response.sites) {
-        setMonitoredSites(response.sites)
-      }
+    chrome.storage.local.get(null, (data) => {
+      setMonitoredSites(data);
       setLoading(false)
-    })
-  }
-
+    });
+  }, [])
+  
   if (loading) {
     return (
       <div className="w-[350px] h-[400px] bg-gray-900 text-white p-4 flex items-center justify-center">
@@ -40,24 +30,22 @@ const App: React.FC = () => {
       </div>
     )
   }
-
+  const siteEntries = Object.entries(monitoredSites); // [[url, data], [url,data] ...]
+  
   return (
     <div className="w-[350px] h-[400px] bg-gray-900 text-white p-4">
-      {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center font-bold text-sm">
           D
         </div>
         <h1 className="text-lg font-semibold">Data Contribution Monitor</h1>
       </div>
-
-      {/* Monitored Sites List */}
       <div className="space-y-3">
         <h2 className="text-sm font-medium text-gray-300 mb-3">
-          Monitored Sites ({monitoredSites.length})
+          Monitored Sites ({siteEntries.length})
         </h2>
         
-        {monitoredSites.length === 0 ? (
+        {siteEntries.length === 0 ? (
           <div className="text-center py-8">
             <div className="text-gray-400 text-sm">
               No websites being monitored
@@ -65,16 +53,16 @@ const App: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-3 max-h-[280px] overflow-y-auto">
-            {monitoredSites.map((site, index) => (
+            {siteEntries.map(([url,data], index) => (
               <motion.div
-                key={site.url}
+                key={url}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
                 className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg"
               >
                 <div className="relative">
-                  {site.isActive ? (
+                  {data.status ? (
                     <motion.div
                       animate={{
                         scale: [1, 1.2, 1],
@@ -94,25 +82,19 @@ const App: React.FC = () => {
 
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-white truncate">
-                    {site.domain}
+                    {url}
                   </div>
                   <div className="text-xs text-gray-400 flex items-center gap-2">
-                    <span>{site.isActive ? 'Active' : 'Completed'}</span>
+                    <span>{data.status ? 'Active' : 'Completed'}</span>
                     <span>•</span>
-                    <span>{site.checkCount}/8 checks</span>
+                    <span>{data.count}/8 checks</span>
                   </div>
-                </div>
-
-                <div className="text-xs text-gray-500">
-                  {formatTimeAgo(site.lastUpdate)}
                 </div>
               </motion.div>
             ))}
           </div>
         )}
       </div>
-
-      {/* Footer */}
       <div className="mt-auto pt-4 border-t border-gray-700">
         <div className="text-center text-xs text-gray-500">
           Monitoring status updates every 5 seconds
@@ -120,18 +102,6 @@ const App: React.FC = () => {
       </div>
     </div>
   )
-}
-
-function formatTimeAgo(timestamp: string): string {
-  const now = Date.now()
-  const time = new Date(timestamp).getTime()
-  const diffMs = now - time
-  const diffMins = Math.floor(diffMs / 60000)
-  
-  if (diffMins < 1) return 'now'
-  if (diffMins < 60) return `${diffMins}m ago`
-  if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`
-  return `${Math.floor(diffMins / 1440)}d ago`
 }
 
 // Mount it
