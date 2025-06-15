@@ -18,46 +18,40 @@ const INTERVAL = 10 * 60 * 1000;
 const TOTAL_RUNS = 8;
 let URL: string;
 let currentRun = 0;
-let monitoringActive = false;
+
 
 URL = window.location.href;
 
-// Auto-start monitoring when content script loads
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('Auto-starting monitoring for:', URL);
-    startTimedMonitoring();
-});
-
-function startTimedMonitoring() {
-    if (monitoringActive) {
-        console.log('Monitoring already active for:', URL);
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (sender.origin !== 'http://localhost:3000'){
+        console.warn('Message received from unknown origin:', sender.origin);
         return;
     }
-    
-    monitoringActive = true;
+    if (message.action === 'START_MONITORING' && message.url === window.location.href) {
+        console.log('started monitoring for:', message.url);
+        startTimedMonitoring(message.url);
+    }
+})
+
+function startTimedMonitoring(url : string) {
     currentRun = 0;
-    
-    console.log(`Starting timed monitoring for ${URL} - ${TOTAL_RUNS} runs over ${(TOTAL_RUNS * INTERVAL) / 60000} minutes`);
+    chrome.storage.local.set({[url] : {status : "Active", startedAt : Date.now()}})
+    console.log(`Starting timed monitoring for ${url} - ${TOTAL_RUNS} runs over ${(TOTAL_RUNS * INTERVAL) / 60000} minutes`);
     
     for (let i = 0; i < TOTAL_RUNS; i++) {
         setTimeout(() => {
-            if (monitoringActive) {
                 currentRun = i + 1;
-                console.log(`Running ping ${currentRun} of ${TOTAL_RUNS} for ${URL}`);
+                console.log(`Running ping ${currentRun} of ${TOTAL_RUNS} for ${url}`);
                 triggerRequestAndSend();
-            }
         }, i * INTERVAL);
     }
-    
-    // Auto-stop after total duration
     setTimeout(() => {
-        monitoringActive = false;
-        console.log('Monitoring completed for:', URL);
-    }, TOTAL_RUNS * INTERVAL + 60000); // Add 1 minute buffer
+        chrome.storage.local.set({[url] : {status : "Completed", startedAt : Date.now()}})
+        console.log('Monitoring completed for:', url);
+    }, TOTAL_RUNS * INTERVAL + 5000); // 5 secs buffer
 }
 
 async function triggerRequestAndSend() {
-    if (!monitoringActive) return;
     
     const startTime = performance.now();
     let performanceData: performanceData;
