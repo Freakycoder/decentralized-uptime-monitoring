@@ -21,4 +21,3 @@ async fn websocket_upgrade(
     println!("upgrading to websocket...");
     ws.on_upgrade(move |socket| async move { manager.handle_validator_connection(socket).await })
 }
-
