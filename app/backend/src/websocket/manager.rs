@@ -1,7 +1,7 @@
 use crate::types::websocket::{
     Location, ServerMessage, StatusDetails, ValidatorConnection, WebsiteStatus,
 };
-use axum::extract::ws::{Message, WebSocket};
+use axum::extract::ws::{Message, Utf8Bytes, WebSocket};
 use chrono::{FixedOffset, Utc};
 use dashmap::DashMap;
 use futures_util::{SinkExt, StreamExt};
@@ -36,11 +36,8 @@ impl WebSocketManager {
 
         let (mpsc_tx, mut mpsc_rx) = mpsc::channel::<Message>(100);
 
-        // Receiving from Validator
-        // Replace the receive_task in manager.rs with this enhanced debugging version:
-
-        // Replace the receive_task in manager.rs with this version:
-
+        let (registration_tx, regsitration_rx) = tokio::sync::oneshot::channel::<String>();
+        let mut registration_tx = Some(registration_tx);
         let receive_task = tokio::spawn(async move {
             println!(
                 "🔄 Starting receive task for connection_id: {}",
@@ -90,9 +87,17 @@ impl WebSocketManager {
                                     println!(
                                         "Currently registered validators are: {:?}",
                                         connections
-                                    )
-                                } else {
-                                    println!("❌ No validator_id found");
+                                    );
+                                    if let Some(tx) = registration_tx.take() {
+                                        if let Err(_) = tx.send(validator_id.to_string()) {
+                                            println!("❌ Failed to signal registration completion");
+                                        } else {
+                                            println!("📡 Registration signal sent - broadcast subscription will start");
+                                        }
+                                    }
+                                } 
+                                if let Some(website_data) = reg_data.get("website_status") {
+                                    println!("Found website status field")
                                 }
                             } else {
                                 println!("❌ No register_validator field found");
@@ -104,8 +109,8 @@ impl WebSocketManager {
                         } else {
                             println!("❌ Failed to parse as JSON");
                         }
-                    },
-                    Ok(_) => {},
+                    }
+                    Ok(_) => {}
                     Err(e) => {
                         eprintln!("❌ WebSocket error receiving message: {:?}", e);
                         break;
@@ -132,27 +137,71 @@ impl WebSocketManager {
             }
         });
 
-        // Listening for broadcasts
+        // broadcast only after regsitration
+        let broadcast_connection_id = connection_id.clone();
         let broadcast_task = tokio::spawn(async move {
-            let mut broadcast_subscriber = broadcast_sender.subscribe(); // here we have subscribed for messages sent by sender
-            while let Ok(server_msg) = broadcast_subscriber.recv().await {
-                // here we're awaiting for the messages to come
-                if let Ok(json) = serde_json::to_string(&server_msg) {
-                    // here we're converting the json to string to sent over websocket
-                    let msg_sent = mpsc_tx.send(Message::Text(json.into())).await; // here we're pushing the string message onto mpsc channel, so that it gets recieved by ws_sender
-                    if msg_sent.is_err() {
-                        // if any error in sending the message to mpsc channel of that validator then break the connection.
-                        break;
+            println!("Broadcast task waiting for registration");
+
+            match regsitration_rx.await {
+                Ok(validator_id) => {
+                    let mut broadcast_subscriber = broadcast_sender.subscribe();
+                    println!("Broadcast subscription active for registered validator");
+
+                    while let Ok(server_msg) = broadcast_subscriber.recv().await {
+                        println!(
+                            "broadcast recieved for regsiterd validator {}",
+                            validator_id
+                        );
+                        match serde_json::to_string(&server_msg) {
+                            Ok(json) => {
+                                println!("Serialized broadcast for {} : {}", validator_id, json);
+                                let message = Message::Text(Utf8Bytes::from(json));
+                                match mpsc_tx.send(message).await {
+                                    Ok(_) => {
+                                        println!(
+                                            "✅ Broadcast queued for validator {}: {}",
+                                            validator_id, broadcast_connection_id
+                                        );
+                                    }
+                                    Err(e) => {
+                                        println!(
+                                            "❌ Failed to queue broadcast for {}: {:?}",
+                                            validator_id, e
+                                        );
+                                        break;
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                println!(
+                                    "❌ Failed to serialize broadcast for {}: {:?}",
+                                    validator_id, e
+                                );
+                            }
+                        }
                     }
+                    println!("broadcast listening ended for validator: {}", validator_id);
+                }
+                Err(_) => {
+                    println!(
+                        "registration signal failed - no broadcast subcription for : {}",
+                        broadcast_connection_id
+                    )
                 }
             }
         });
 
         // Essentially you're spawning (Creating) multiple async tasks, the moment one task fails or completes succesfully we instantly close the other 2 tasks.
         tokio::select! {
-            _ = receive_task => {},
-            _ = send_task => {},
-            _ = broadcast_task => {},
+            _ = receive_task => {
+                println!("Extension recieve task completed (browser closed)")
+            },
+            _ = send_task => {
+                println!("Extension send task completed (browser closed)")
+            },
+            _ = broadcast_task => {
+                println!("Extension broadcast task completed (browser closed)")
+            },
         }
 
         self.connections.remove(&connection_id);
