@@ -311,7 +311,12 @@ const WebsiteMonitorPage = () => {
 
     const response = await axios.post('http://127.0.0.1:3001/website-monitor/add', {
       url_to_monitor: websiteUrl
+    },{
+      headers : {Authorization : `Bearer ${localStorage.getItem('authToken')}`}
     })
+    if(response.data){
+      setLoading(false)
+    }
     setWebsiteResponse(response.data.message);
 
     // Simulate API call to start monitoring
