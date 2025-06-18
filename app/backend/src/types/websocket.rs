@@ -24,16 +24,12 @@ pub struct RegisterValidatorData {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WebsiteStatusData {
     pub url: String,
-    pub status: WebsiteStatus,
-    pub response_time: u32,
     pub timestamp: String,
-    pub details: Option<StatusDetails>,
     pub validator_id: String,
-    pub latitude: f64,
-    pub longitude: f64,
+    pub details: Option<StatusDetails>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize,Clone)]
 pub enum WebsiteStatus {
     Up,
     Down,
@@ -41,12 +37,13 @@ pub enum WebsiteStatus {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct StatusDetails {
-    pub dns_lookup: Option<u32>,
-    pub tcp_connection: Option<u32>,
-    pub tls_handshake: Option<u32>,
-    pub ttfb: Option<u32>,
-    pub content_download: Option<u32>,
-    pub http_status_code: Option<u16>,
+    pub dns_lookup: Option<f64>,
+    pub tcp_connection: Option<f64>,
+    pub tls_handshake: Option<f64>,
+    pub ttfb: Option<f64>,
+    pub content_download: Option<f64>,
+    pub http_status_code: WebsiteStatus,
+    pub total_duration : Option<f64>
 }
 
 #[derive(Debug, Clone)]
