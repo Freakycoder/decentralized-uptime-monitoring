@@ -1,5 +1,5 @@
 use crate::types::websocket::{
-    Location, ServerMessage, StatusDetails, ValidatorConnection, WebsiteStatus,
+    Location, ServerMessage, StatusDetails, ValidatorConnection, WebsiteStatus, WebsiteStatusData,
 };
 use axum::extract::ws::{Message, Utf8Bytes, WebSocket};
 use chrono::{FixedOffset, Utc};
@@ -95,9 +95,65 @@ impl WebSocketManager {
                                             println!("📡 Registration signal sent - broadcast subscription will start");
                                         }
                                     }
-                                } 
-                                if let Some(website_data) = reg_data.get("website_status") {
-                                    println!("Found website status field")
+                                }
+                                if let Some(website_data) = json.get("website_status") {
+                                    println!("Found website status field");
+
+                                    if let (Some(url), Some(timestamp), Some(validator_id)) = ( // this is called tuple pattern matching. if anyone contains null then block is skipped.
+                                        website_data.get("url").and_then(|v| v.as_str()),
+                                        website_data.get("timestamp").and_then(|v| v.as_str()),
+                                        website_data.get("validator_id").and_then(|v| v.as_str()),
+                                    ) {
+                                        let details = website_data.get("details").and_then(
+                                            |status_details| {
+                                                let http_status_str = status_details
+                                                    .get("http_status_code")?
+                                                    .as_str()?;
+                                                let http_status_code = match http_status_str {
+                                                    "Up" => WebsiteStatus::Up,
+                                                    "Down" => WebsiteStatus::Down,
+                                                    _ => return None,
+                                                };
+
+                                                Some(StatusDetails {
+                                                    dns_lookup: status_details
+                                                        .get("dns_lookup")
+                                                        .and_then(|v| v.as_f64()),
+                                                    tcp_connection: status_details
+                                                        .get("tcp_connection")
+                                                        .and_then(|v| v.as_f64()),
+                                                    tls_handshake: status_details
+                                                        .get("tls_handshake")
+                                                        .and_then(|v| v.as_f64()),
+                                                    ttfb: status_details
+                                                        .get("ttfb")
+                                                        .and_then(|v| v.as_f64()),
+                                                    content_download: status_details
+                                                        .get("content_download")
+                                                        .and_then(|v| v.as_f64()),
+                                                    http_status_code,
+                                                    total_duration: status_details
+                                                        .get("total_duration")
+                                                        .and_then(|v| v.as_f64()),
+                                                })
+                                            },
+                                        );
+
+                                        let website_status_data = WebsiteStatusData {
+                                            url: url.to_string(),
+                                            timestamp: timestamp.to_string(),
+                                            validator_id: validator_id.to_string(),
+                                            details,
+                                        };
+
+                                        println!(
+                                            "Parsed WebsiteStatusData: {:?}",
+                                            website_status_data
+                                        );
+
+                                        
+                                        
+                                    }
                                 }
                             } else {
                                 println!("❌ No register_validator field found");
@@ -245,16 +301,13 @@ impl WebSocketManager {
         ()
     }
 
-    // here we're using the reqwest library which is exatcly the same as axios.
+    // here we're using the reqwest library which is exactly the same as axios.
     async fn forward_status_to_api(
         url: String,
-        status: WebsiteStatus,
         response_time: u32,
         timestamp: String,
         details: Option<StatusDetails>,
-        validator_id: String,
-        latitude: f64,
-        longitude: f64,
+        validator_id: String
     ) -> Result<(), reqwest::Error> {
         let api_url = "http://your-api-server.com/website-status"; // replace with your actual API endpoint
 
@@ -263,13 +316,10 @@ impl WebSocketManager {
             .post(api_url)
             .json(&serde_json::json!({
                 "url": url,
-                "status": status,
                 "response_time": response_time,
                 "timestamp": timestamp,
                 "details": details,
-                "validator_id" : validator_id,
-                "latitude" : latitude,
-                "longitude" : longitude
+                "validator_id" : validator_id
             }))
             .send()
             .await?;
