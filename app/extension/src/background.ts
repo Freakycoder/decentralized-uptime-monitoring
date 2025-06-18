@@ -56,7 +56,7 @@ export class BackgroundService {
         }
 
         try {
-          axios.post(`${this.SERVER_ENDPOINT}/extension/monitoring-results`, payload)
+          axios.post(`${this.SERVER_ENDPOINT}/ws/upgrade`, payload)
           console.log("Performance data sent to server:", payload)
         }
         catch (err) {
