@@ -6,29 +6,29 @@
   "types": "./src/index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc"
+    "build": "rm -rf output && tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf output"
   },
   "exports": {
     ".": {
       "types": "./src/index.ts",
       "require": "./output/index.js",
-      "import": "./output/index.js"
-    },
-    "./websocket": {
-      "types": "./src/websocket.ts",
-      "require": "./output/websocket.js",
-      "import": "./output/websocket.js"
+      "import": "./output/index.js",
+      "default": "./output/index.js"
     }
   },
+  "files": [
+    "output",
+    "src",
+    "README.md"
+  ],
   "keywords": [],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.12.1",
-  "dependencies": {
-    "ws": "^8.18.2"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@types/ws": "^8.18.1",
     "typescript": "^5.0.0"
   }
 }
