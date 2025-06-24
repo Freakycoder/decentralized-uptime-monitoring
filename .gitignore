@@ -6,6 +6,10 @@ node_modules
 test-ledger
 .yarn
 
+# build output inside shared directory
+app/shared/output/
+
+
 # Node.js
 node_modules/
 npm-debug.log*
