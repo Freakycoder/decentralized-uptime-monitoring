@@ -7,11 +7,8 @@ use axum::{
     extract::{Json, State},
     routing::post,
 };
-
 use chrono::{Duration, Utc};
-
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
-
 use jsonwebtoken::{EncodingKey, Header, encode};
 
 pub fn user_router() -> Router<DatabaseConnection> {
@@ -110,6 +107,7 @@ async fn signin(
         });
     }
 }
+
 
 pub fn create_hash(unhashed_pass: String) -> String {
     let hashed_pass = bcrypt::hash(unhashed_pass, bcrypt::DEFAULT_COST).unwrap_or_default();
