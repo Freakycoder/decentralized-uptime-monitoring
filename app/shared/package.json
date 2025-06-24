@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Contains shared socket connection object for websocket.",
   "main": "./output/index.js",
-  "types": "./src/index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "rm -rf output && tsc",
@@ -11,12 +10,7 @@
     "clean": "rm -rf output"
   },
   "exports": {
-    ".": {
-      "types": "./src/index.ts",
-      "require": "./output/index.js",
-      "import": "./output/index.js",
-      "default": "./output/index.js"
-    }
+    ".": "./output/index.js"
   },
   "files": [
     "output",

@@ -1,7 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSocket = exports.sendMessage = exports.initSocket = void 0;
+exports.getSocket = exports.isSocketConnected = exports.restoreConnectionIfExists = exports.checkForExistingConnection = exports.closeSocket = exports.setMessageHandler = exports.sendMessage = exports.initSocket = void 0;
 var websocket_1 = require("./websocket");
 Object.defineProperty(exports, "initSocket", { enumerable: true, get: function () { return websocket_1.initSocket; } });
 Object.defineProperty(exports, "sendMessage", { enumerable: true, get: function () { return websocket_1.sendMessage; } });
+Object.defineProperty(exports, "setMessageHandler", { enumerable: true, get: function () { return websocket_1.setMessageHandler; } });
+Object.defineProperty(exports, "closeSocket", { enumerable: true, get: function () { return websocket_1.closeSocket; } });
+Object.defineProperty(exports, "checkForExistingConnection", { enumerable: true, get: function () { return websocket_1.checkForExistingConnection; } });
+Object.defineProperty(exports, "restoreConnectionIfExists", { enumerable: true, get: function () { return websocket_1.restoreConnectionIfExists; } });
+Object.defineProperty(exports, "isSocketConnected", { enumerable: true, get: function () { return websocket_1.isSocketConnected; } });
 Object.defineProperty(exports, "getSocket", { enumerable: true, get: function () { return websocket_1.getSocket; } });

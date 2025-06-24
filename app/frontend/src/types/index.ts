@@ -103,11 +103,15 @@ export interface LeaderboardEntry {
  * User notification
  */
 export interface Notification {
-    id: string;                 // Unique notification identifier
-    title: string;              // Notification title
-    message: string;            // Notification message content
-    timestamp: string;          // ISO timestamp of when notification was created
-    read: boolean;              // Whether the notification has been read
+  id: string;
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+  type?: string; // 'general', 'monitoring', etc.
+  data?: any; // Additional data
+  isNew?: boolean; // For highlighting new notifications
+  actionTaken?: 'accept' | 'reject'; // For monitoring tasks
 }
 
 /**

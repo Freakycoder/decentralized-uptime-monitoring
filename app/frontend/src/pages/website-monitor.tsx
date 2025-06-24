@@ -309,7 +309,7 @@ const WebsiteMonitorPage = () => {
 
     setLoading(true);
 
-    const response = await axios.post('http://127.0.0.1:3001/website-monitor/add', {
+    const response = await axios.post('http://127.0.0.1:3001/add-website/add', {
       url_to_monitor: websiteUrl
     },{
       headers : {Authorization : `Bearer ${localStorage.getItem('authToken')}`}

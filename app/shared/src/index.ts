@@ -1,1 +1,10 @@
-export { initSocket, sendMessage, getSocket } from './websocket';
+export { 
+  initSocket, 
+  sendMessage, 
+  setMessageHandler,
+  closeSocket,
+  checkForExistingConnection,
+  restoreConnectionIfExists,
+  isSocketConnected,
+  getSocket 
+} from './websocket';

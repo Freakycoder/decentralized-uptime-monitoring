@@ -1,16 +1,18 @@
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { Notification } from '../types';
 import { notifications as initialNotifications } from '../lib/mockData';
+
 // For simplicity in this demo, we'll create a simple UUID function instead of using a package
 const generateId = () => Math.random().toString(36).substring(2, 11);
 
 // Define the context interface
 interface NotificationsContextType {
     notifications: Notification[];
-    addNotification: (title: string, message: string) => void;
+    addNotification: (title: string, message: string, type?: string, data?: any) => void;
     markAsRead: (id: string) => void;
     markAllAsRead: () => void;
     unreadCount: number;
+    handleNotificationAction: (id: string, action: 'accept' | 'reject') => void;
 }
 
 // Create the context with default values
@@ -19,55 +21,91 @@ const NotificationsContext = createContext<NotificationsContextType | undefined>
 // Provider component
 export const NotificationsProvider = ({ children }: { children: ReactNode }) => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [unreadCount, setUnreadCount] = useState(0);
+
+    // Calculate unread count directly from notifications
+    const unreadCount = notifications.filter(n => !n.read).length;
 
     // Initialize notifications from mock data
     useEffect(() => {
         setNotifications(initialNotifications);
-        updateUnreadCount(initialNotifications);
     }, []);
 
-    // Update unread count when notifications change
-    const updateUnreadCount = (notificationsList: Notification[]) => {
-        const count = notificationsList.filter(n => n.read == false).length;
-        setUnreadCount(count);
-    };
-
-    // Add a new notification
-    const addNotification = (title: string, message: string) => {
+    // Add a new notification (new ones go to the top)
+    const addNotification = (title: string, message: string, type: string = 'general', data?: any) => {
         const newNotification: Notification = {
             id: `notif_${generateId()}`,
             title,
             message,
             timestamp: new Date().toISOString(),
             read: false,
+            type, // Add type field
+            data, // Add data field for additional info
+            isNew: true, // Mark as new for highlighting
         };
-        setNotifications((prevNotifications) => [...prevNotifications, newNotification]);
-        updateUnreadCount(notifications); // updating the unread count after adding a new notification.
+        
+        // Add to the beginning of the array (top)
+        setNotifications((prevNotifications) => [newNotification, ...prevNotifications]);
+        
+        // Remove the isNew flag after 5 seconds for visual effect
+        setTimeout(() => {
+            setNotifications(prev => 
+                prev.map(notif => 
+                    notif.id === newNotification.id 
+                        ? { ...notif, isNew: false }
+                        : notif
+                )
+            );
+        }, 5000);
+    };
+
+    // Handle notification actions (accept/reject for monitoring tasks)
+    const handleNotificationAction = (id: string, action: 'accept' | 'reject') => {
+        setNotifications(prev =>
+            prev.map(notif =>
+                notif.id === id
+                    ? { 
+                        ...notif, 
+                        read: true, 
+                        actionTaken: action,
+                        message: `${notif.message} - ${action === 'accept' ? 'Accepted' : 'Rejected'}`
+                      }
+                    : notif
+            )
+        );
+        
+        // Here you could also send the action to your backend
+        console.log(`Notification ${id} ${action}ed`);
     };
 
     // Mark a notification as read
     const markAsRead = (id: string) => {
-        const updatedNotifications = notifications.map(notification =>
-            notification.id === id ? { ...notification, read: true } : notification
+        setNotifications((prevNotifications) =>
+            prevNotifications.map(notification =>
+                notification.id === id ? { ...notification, read: true } : notification
+            )
         );
-        setNotifications(updatedNotifications);
-        updateUnreadCount(updatedNotifications); // after marking as read again update the unread count
     };
 
     // Mark all notifications as read
     const markAllAsRead = () => {
-        const updatedNotifications = notifications.map(notification => ({
-            ...notification,
-            read: true,
-        }));
-        setNotifications(updatedNotifications);
-        updateUnreadCount(updatedNotifications);
+        setNotifications((prevNotifications) =>
+            prevNotifications.map(notification => ({
+                ...notification,
+                read: true,
+            }))
+        );
     };
 
     return (
         <NotificationsContext.Provider
-            value={{ notifications, addNotification, markAsRead, markAllAsRead, unreadCount }}
+            value={{ 
+                notifications, 
+                addNotification, 
+                markAsRead, 
+                markAllAsRead, 
+                unreadCount,
+                handleNotificationAction 
+            }}
         >
             {children}
         </NotificationsContext.Provider>
