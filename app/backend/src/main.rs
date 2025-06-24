@@ -39,7 +39,8 @@ async fn main() -> Result<(), std::io::Error> {
         .nest("/user", routes::user::user_router().with_state(db.clone()))
         .nest("/ws", routes::websocket::websocket_router(ws_manager))
         .nest("/validator", routes::validator::validator_router().with_state(db.clone()))
-        .nest("/website-monitor", routes::website_monitoring::website_router().with_state(app_state))
+        .nest("/add-website", routes::add_website::add_website_router().with_state(app_state))
+        .nest("/performance-data", routes::website_performace::performance_router().with_state(db.clone()))
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)
