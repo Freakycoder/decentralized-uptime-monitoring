@@ -99,7 +99,8 @@ impl WebSocketManager {
                                 if let Some(website_data) = json.get("website_status") {
                                     println!("Found website status field");
 
-                                    if let (Some(website_id), Some(timestamp), Some(validator_id)) = ( // this is called tuple pattern matching. if anyone contains null then block is skipped.
+                                    if let (Some(website_id), Some(timestamp), Some(validator_id)) = (
+                                        // this is called tuple pattern matching. if anyone contains null then block is skipped.
                                         website_data.get("website_id").and_then(|v| v.as_str()),
                                         website_data.get("timestamp").and_then(|v| v.as_str()),
                                         website_data.get("validator_id").and_then(|v| v.as_str()),
@@ -151,8 +152,21 @@ impl WebSocketManager {
                                             website_status_data
                                         );
 
-                                        match forward_status_to_api {
-                                            
+                                        let api_call_result = Self::forward_status_to_api(
+                                            website_status_data.website_id,
+                                            website_status_data.timestamp,
+                                            website_status_data.details,
+                                            website_status_data.validator_id,
+                                        )
+                                        .await;
+
+                                        match api_call_result {
+                                            Ok(_) => {
+                                                println!("✅ Successfully forwarded website status to API for: {}", website_id);
+                                            }
+                                            Err(e) => {
+                                                println!("❌ Failed to forward website status to API for {}: {:?}", website_id, e);
+                                            }
                                         }
                                     }
                                 }
@@ -290,10 +304,10 @@ impl WebSocketManager {
         }
     }
 
-    pub fn website_to_broadcast(&self, url: String, id : Uuid) -> () {
+    pub fn website_to_broadcast(&self, url: String, id: Uuid) -> () {
         let url_to_broadcast = ServerMessage {
             url: url.to_owned(),
-            id : id.to_string().to_owned()
+            id: id.to_string().to_owned(),
         };
         let _ = self.broadcast_tx.send(url_to_broadcast.clone());
         println!(
@@ -306,26 +320,23 @@ impl WebSocketManager {
     // here we're using the reqwest library which is exactly the same as axios.
     async fn forward_status_to_api(
         website_id: String,
-        response_time: u32,
         timestamp: String,
         details: Option<StatusDetails>,
-        validator_id: String
+        validator_id: String,
     ) -> Result<(), reqwest::Error> {
-        let api_url = "http://your-api-server.com/website-status"; // replace with your actual API endpoint
+        let api_url = "http://localhost:3001/performace-data/add";
 
         let client = reqwest::Client::new();
         client
             .post(api_url)
             .json(&serde_json::json!({
                 "website_id": website_id,
-                "response_time": response_time,
                 "timestamp": timestamp,
                 "details": details,
                 "validator_id" : validator_id
             }))
             .send()
             .await?;
-
         Ok(())
     }
 }
