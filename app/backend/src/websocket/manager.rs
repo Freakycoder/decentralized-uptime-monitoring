@@ -99,8 +99,8 @@ impl WebSocketManager {
                                 if let Some(website_data) = json.get("website_status") {
                                     println!("Found website status field");
 
-                                    if let (Some(url), Some(timestamp), Some(validator_id)) = ( // this is called tuple pattern matching. if anyone contains null then block is skipped.
-                                        website_data.get("url").and_then(|v| v.as_str()),
+                                    if let (Some(website_id), Some(timestamp), Some(validator_id)) = ( // this is called tuple pattern matching. if anyone contains null then block is skipped.
+                                        website_data.get("website_id").and_then(|v| v.as_str()),
                                         website_data.get("timestamp").and_then(|v| v.as_str()),
                                         website_data.get("validator_id").and_then(|v| v.as_str()),
                                     ) {
@@ -140,7 +140,7 @@ impl WebSocketManager {
                                         );
 
                                         let website_status_data = WebsiteStatusData {
-                                            url: url.to_string(),
+                                            website_id: website_id.to_string(),
                                             timestamp: timestamp.to_string(),
                                             validator_id: validator_id.to_string(),
                                             details,
@@ -151,8 +151,9 @@ impl WebSocketManager {
                                             website_status_data
                                         );
 
-                                        
-                                        
+                                        match forward_status_to_api {
+                                            
+                                        }
                                     }
                                 }
                             } else {
@@ -289,9 +290,10 @@ impl WebSocketManager {
         }
     }
 
-    pub fn website_to_broadcast(&self, url: String) -> () {
+    pub fn website_to_broadcast(&self, url: String, id : Uuid) -> () {
         let url_to_broadcast = ServerMessage {
             url: url.to_owned(),
+            id : id.to_string().to_owned()
         };
         let _ = self.broadcast_tx.send(url_to_broadcast.clone());
         println!(
@@ -303,7 +305,7 @@ impl WebSocketManager {
 
     // here we're using the reqwest library which is exactly the same as axios.
     async fn forward_status_to_api(
-        url: String,
+        website_id: String,
         response_time: u32,
         timestamp: String,
         details: Option<StatusDetails>,
@@ -315,7 +317,7 @@ impl WebSocketManager {
         client
             .post(api_url)
             .json(&serde_json::json!({
-                "url": url,
+                "website_id": website_id,
                 "response_time": response_time,
                 "timestamp": timestamp,
                 "details": details,
