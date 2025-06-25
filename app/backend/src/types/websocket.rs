@@ -23,7 +23,7 @@ pub struct RegisterValidatorData {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WebsiteStatusData {
-    pub url: String,
+    pub website_id: String,
     pub timestamp: String,
     pub validator_id: String,
     pub details: Option<StatusDetails>,
@@ -63,6 +63,7 @@ pub struct Location {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ServerMessage {
     pub url: String,
+    pub id : String
 }
 
 #[derive(Debug, Clone)]
