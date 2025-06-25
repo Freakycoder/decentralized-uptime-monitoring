@@ -45,16 +45,17 @@ const ValidatorRegistration = () => {
   useEffect(() => {
     const handleWebsocketMessage = (message: any) => {
       console.log('📨 Processing WebSocket message in ValidatorRegistration:', message);
-      if (message.url) {
-        console.log('🌐 Received website monitoring task:', message.url);
+      if (message.url && message.id) {
+        console.log('🌐 Received website monitoring task:', { url: message.url, id: message.id });
         addNotification(
           'New Monitoring Task',
-          `New website to monitor: ${message.url}`
+          `New website to monitor: ${message.url}`,
+          'monitoring',
+          { url: message.url, website_id: message.id }
         );
       }
     }
     setMessageHandler(handleWebsocketMessage);
-    return () => { }
   }, [addNotification])
 
   // Check if wallet is connected when component mounts or when connection status changes
