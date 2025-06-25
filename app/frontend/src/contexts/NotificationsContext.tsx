@@ -60,6 +60,18 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
 
     // Handle notification actions (accept/reject for monitoring tasks)
     const handleNotificationAction = (id: string, action: 'accept' | 'reject') => {
+        const notification = notifications.find(n => n.id === id);
+        
+        if (action === 'accept' && notification?.type === 'monitoring' && notification?.data) {
+            // Send monitoring task to extension
+            sendMonitoringTaskToExtension(notification.data.url, notification.data.website_id);
+            
+            console.log(`✅ Monitoring task accepted and sent to extension:`, {
+                url: notification.data.url,
+                website_id: notification.data.website_id
+            });
+        }
+
         setNotifications(prev =>
             prev.map(notif =>
                 notif.id === id
@@ -73,8 +85,24 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
             )
         );
         
-        // Here you could also send the action to your backend
         console.log(`Notification ${id} ${action}ed`);
+    };
+
+    // Function to communicate with extension
+    const sendMonitoringTaskToExtension = (url: string, website_id: string) => {
+        try {
+            window.postMessage({
+                type: 'START_MONITORING',
+                url: url,
+                websiteId: website_id,
+                sessionId: generateId(),
+                totalRuns: 8
+            }, '*');
+            
+            console.log('📡 Sent monitoring task via window.postMessage');
+        } catch (error) {
+            console.error('❌ Failed to send via postMessage:', error);
+        }
     };
 
     // Mark a notification as read
