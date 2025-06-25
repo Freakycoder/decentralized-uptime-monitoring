@@ -1,11 +1,10 @@
 use sea_orm::prelude::DateTimeWithTimeZone;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PerfomanceDataInput{
-    pub validator_id : Uuid,
-    pub website_id: Uuid,
+    pub validator_id : String,
+    pub website_id: String,
     pub timestamp: DateTimeWithTimeZone,
     pub http_status_code: Option<f64>,
     pub dns_resolution_ms: Option<f64>,
