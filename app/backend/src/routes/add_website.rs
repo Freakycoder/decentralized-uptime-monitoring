@@ -54,8 +54,8 @@ async fn website_to_add(
     let result = new_url.insert(&db).await;
 
     match result {
-        Ok(_) => {
-            ws.website_to_broadcast(url);
+        Ok(website_details) => {
+            ws.website_to_broadcast(url, website_details.id);
             return Json(AddWebsiteResponse {
                 status_code: 200,
                 message: format!("New URL registered succesfully"),
