@@ -8,6 +8,7 @@ interface MonitoredWebsites {
 }
 
 interface PerformanceData {
+  website_id : string,
   dnsLookup: number,
   tcpConnection: number,
   tlsHandshake: number,
@@ -35,10 +36,15 @@ export class BackgroundService {
       }
       else if (message.action === 'PERF_DATA' && message.url && message.data) {
         // Get performance data from content script
+
+        const validator_data_str = localStorage.get('validator_connection_data');
+        const validator_data = JSON.parse(validator_data_str);
+        const validator_id = validator_data.validatorId;
         const perfData = message.data.pingData[message.url] as PerformanceData;
 
         const payload = {
-          url: message.url,
+          website_id: perfData.website_id,
+          validator_id,
           timestamp: new Date().toISOString(),
           runNumber: message.runNumber,
           totalRuns: message.totalRuns,
