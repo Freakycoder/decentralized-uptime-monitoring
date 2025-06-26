@@ -1,7 +1,7 @@
 import axios from "axios";
 
 interface performanceData {
-    website_id : string,
+    website_id: string,
     dnsLookup: number,
     tcpConnection: number,
     tlsHandshake: number,
@@ -25,12 +25,12 @@ const TOTAL_RUNS = 8;
 let currentRun = 0;
 
 window.addEventListener('message', async (event) => {
-
+console.log('🎧 Content script received message:', event.data);
     if (event.origin !== window.location.origin) {
         return
     }
     if (event.data.type === 'START_MONITORING') {
-        const { url,websiteId, sessionId, totalRuns = 8 } = event.data;
+        const { url, websiteId, sessionId, totalRuns = 8 } = event.data;
         console.log(`started monitoring for ${url} - Session: ${sessionId}`);
 
         activeMonitoringSessions.set(sessionId, {
@@ -42,13 +42,14 @@ window.addEventListener('message', async (event) => {
             type: 'MONITORING_STARTED',
             sessionId,
             url,
-            websiteId
+            websiteId,
+            success: true
         }, '*')
-        startTimedMonitoring(url,websiteId, sessionId, 0, totalRuns)
+        startTimedMonitoring(url, websiteId, sessionId, 0, totalRuns)
     }
 })
 
-function startTimedMonitoring(url: string,websiteId:string, sessionId: string, runNumber: number, totalRuns: number) {
+function startTimedMonitoring(url: string, websiteId: string, sessionId: string, runNumber: number, totalRuns: number) {
     currentRun = 0;
     chrome.storage.local.set({ [url]: { status: "Active", startedAt: Date.now(), sessionId } })
     console.log(`Starting timed monitoring for ${url} - ${TOTAL_RUNS} runs over ${(TOTAL_RUNS * INTERVAL) / 60000} minutes`);
@@ -57,7 +58,7 @@ function startTimedMonitoring(url: string,websiteId:string, sessionId: string, r
         setTimeout(async () => {
             currentRun = i + 1;
             console.log(`Running ping ${currentRun} of ${TOTAL_RUNS} for ${url}`);
-            await triggerRequestAndSend(url,websiteId, sessionId, currentRun, totalRuns);
+            await triggerRequestAndSend(url, websiteId, sessionId, currentRun, totalRuns);
         }, i * INTERVAL);
     }
     setTimeout(() => {
@@ -66,8 +67,8 @@ function startTimedMonitoring(url: string,websiteId:string, sessionId: string, r
     }, TOTAL_RUNS * INTERVAL + 5000); // 5 secs buffer
 }
 
-async function triggerRequestAndSend(url: string, websiteId : string, sessionId: string, runNumber: number, totalRuns: number) {
-    
+async function triggerRequestAndSend(url: string, websiteId: string, sessionId: string, runNumber: number, totalRuns: number) {
+
     const startTime = performance.now();
     let performanceData: performanceData;
 
@@ -108,7 +109,7 @@ async function triggerRequestAndSend(url: string, websiteId : string, sessionId:
         } else {
             const endTime = performance.now();
             performanceData = {
-                website_id : websiteId,
+                website_id: websiteId,
                 dnsLookup: 0,
                 tcpConnection: 0,
                 tlsHandshake: 0,
@@ -206,9 +207,9 @@ async function triggerRequestAndSend(url: string, websiteId : string, sessionId:
     }
 }
 
-function extractPerformanceData(entry: PerformanceResourceTiming | PerformanceNavigationTiming, statusCode: number, websiteId : string): performanceData {
+function extractPerformanceData(entry: PerformanceResourceTiming | PerformanceNavigationTiming, statusCode: number, websiteId: string): performanceData {
     return {
-        website_id : websiteId,
+        website_id: websiteId,
         dnsLookup: entry.domainLookupEnd - entry.domainLookupStart,
         tcpConnection: entry.connectEnd - entry.connectStart,
         tlsHandshake: entry.secureConnectionStart > 0 ? entry.connectEnd - entry.secureConnectionStart : 0,

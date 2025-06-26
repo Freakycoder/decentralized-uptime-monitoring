@@ -7,49 +7,49 @@ import Link from 'next/link';
 
 const NotificationIndicator: React.FC = () => {
   const { unreadCount } = useNotifications();
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [showPulse, setShowPulse] = useState(false);
+  const [previousCount, setPreviousCount] = useState(0);
 
-  // Animate the bell when there are new unread notifications
   useEffect(() => {
-    if (unreadCount > 0) {
-      setIsAnimating(true);
-      const timer = setTimeout(() => setIsAnimating(false), 2000);
+    if (unreadCount > previousCount) {
+      setShowPulse(true);
+      const timer = setTimeout(() => setShowPulse(false), 3000);
       return () => clearTimeout(timer);
     }
-  }, [unreadCount]);
+    setPreviousCount(unreadCount);
+  }, [unreadCount, previousCount]);
 
   return (
     <Link href="/notifications" passHref>
-      <Button variant="outline" size="icon" className="relative">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="relative w-9 h-9 rounded-lg hover:bg-accent"
+      >
+        <Bell size={18} className="text-muted-foreground" />
+        
         <AnimatePresence>
-          {isAnimating && (
-            <motion.span
-              initial={{ rotate: -10 }}
-              animate={{ rotate: [0, 15, -15, 10, -10, 5, -5, 0] }}
-              transition={{ duration: 0.8, ease: "easeInOut" }}
-              className="absolute inset-0 flex items-center justify-center"
+          {unreadCount > 0 && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              className="absolute -top-1 -right-1"
             >
-              <Bell className="h-5 w-5" />
-            </motion.span>
-          )}
-        </AnimatePresence>
-        
-        <Bell className={`h-5 w-5 ${isAnimating ? 'opacity-0' : 'opacity-100'}`} />
-        
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex items-center justify-center">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-primary">
-                {unreadCount > 0 && (
-                  <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white">
+              <span className="relative flex h-5 w-5">
+                {showPulse && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                )}
+                <span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 items-center justify-center">
+                  <span className="text-[10px] font-bold text-white">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
-                )}
+                </span>
               </span>
-            </span>
-          </span>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </Button>
     </Link>
   );
