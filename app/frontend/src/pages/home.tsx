@@ -1,22 +1,94 @@
 // app/frontend/src/pages/home.tsx
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useRouter } from 'next/router';
+import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../components/layout/Layout';
-import WelcomeBanner from '../components/dashboard/WelcomeBanner';
-import ContributionStats from '../components/dashboard/ContributionStats';
-import DashboardCard from '../components/dashboard/DashboardCard';
 import ValidatorRegistration from '../components/dashboard/ValidatorRegistration';
+import DashboardCard from '../components/dashboard/DashboardCard';
 import { contributionMethods, userStats } from '../lib/mockData';
 import { useAuth } from '../contexts/AuthContext';
-import { TrendingUp, Zap, Globe, Users, Activity, Clock } from 'lucide-react';
+import { useNotifications } from '../contexts/NotificationsContext';
+import { 
+  Globe, 
+  Shield, 
+  Activity, 
+  Users,
+  Plus,
+  CheckCircle,
+  BarChart3,
+  Zap,
+  Award,
+  Clock,
+  TrendingUp
+} from 'lucide-react';
+import axios from 'axios';
 
 const Home = () => {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const { isAuthenticated, isValidated } = useAuth();
+  const { addNotification } = useNotifications();
+  const [showValidatorModal, setShowValidatorModal] = useState(false);
+  
+  // Website monitoring form state
+  const [websiteUrl, setWebsiteUrl] = useState('');
+  const [formLoading, setFormLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    
+    // Check if validator registration should be shown
+    if (router.query.showValidator === 'true') {
+      setShowValidatorModal(true);
+      // Remove query param
+      router.replace('/home', undefined, { shallow: true });
+    }
+  }, [router]);
+
+  const handleWebsiteSubmission = async () => {
+    setError('');
+    setSuccess('');
+
+    if (!websiteUrl.trim()) {
+      setError('Please enter a website URL');
+      return;
+    }
+
+    try {
+      new URL(websiteUrl);
+    } catch {
+      setError('Please enter a valid URL');
+      return;
+    }
+
+    setFormLoading(true);
+
+    try {
+      const response = await axios.post('http://127.0.0.1:3001/website-monitor/add', {
+        url_to_monitor: websiteUrl
+      });
+
+      if (response.data.status_code === 200) {
+        setSuccess('Website successfully added for monitoring!');
+        addNotification(
+          'Website Added Successfully', 
+          `${websiteUrl} has been added to your monitoring list.`
+        );
+        setWebsiteUrl('');
+      } else if (response.data.status_code === 409) {
+        setError('Website is already being monitored');
+      } else {
+        setError('Failed to add website. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error adding website:', error);
+      setError('Failed to add website. Server error occurred.');
+    } finally {
+      setFormLoading(false);
+    }
+  };
 
   if (!mounted) {
     return (
@@ -32,244 +104,323 @@ const Home = () => {
   }
 
   return (
-    <Layout title={isValidated ? "Dashboard" : "Getting Started"}>
-      {/* Welcome banner always appears first */}
-      <WelcomeBanner />
-      
-      {!isValidated ? (
-        // Content for non-validated users: show validator registration with context
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="space-y-8"
-        >
-          {/* Contextual introduction for new users */}
-          <div className="text-center space-y-8">
-            <div className="space-y-6">
-              <h2 className="text-4xl font-bold text-gray-900">Complete Your Validator Setup</h2>
-              <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
-                You're just one step away from joining our global network of validators and starting to earn SOL tokens. 
-                The registration process takes about 2 minutes and connects you to thousands of monitoring opportunities worldwide.
-              </p>
-            </div>
-            
-            {/* Benefits overview for new users */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 rounded-2xl p-8"
-              >
-                <div className="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center mb-6">
-                  <TrendingUp className="w-7 h-7 text-emerald-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Earn Passive Income</h3>
-                <p className="text-gray-600">
-                  Get paid in SOL tokens for contributing your device's computing power to monitor websites and networks.
-                </p>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-8"
-              >
-                <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center mb-6">
-                  <Globe className="w-7 h-7 text-blue-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Global Impact</h3>
-                <p className="text-gray-600">
-                  Help create a decentralized monitoring network that improves internet reliability for everyone.
-                </p>
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-2xl p-8"
-              >
-                <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center mb-6">
-                  <Zap className="w-7 h-7 text-purple-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Simple Setup</h3>
-                <p className="text-gray-600">
-                  Connect your wallet, verify your location, and start earning. No technical expertise required.
-                </p>
-              </motion.div>
-            </div>
-            
-            {/* Call to action */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl p-8 max-w-3xl mx-auto"
+    <Layout title="Dashboard">
+      <div className="space-y-8">
+        {/* Content Based on User Type */}
+        <AnimatePresence mode="wait">
+          {!isValidated ? (
+            // Non-Validator Dashboard
+            <motion.div
+              key="non-validator"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-8"
             >
-              <h3 className="text-2xl font-bold text-indigo-900 mb-3">Ready to Start Earning?</h3>
-              <p className="text-indigo-700 mb-4 text-lg">
-                Join over 10,000 validators who have earned a combined 50,000+ SOL tokens by contributing to our network.
-              </p>
-              <div className="text-indigo-600 font-semibold">
-                ↓ Complete the validator registration below ↓
-              </div>
-            </motion.div>
-          </div>
+              {/* Website Monitoring Section */}
+              <section>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-semibold text-gray-900">Website Monitoring</h2>
+                    <p className="text-gray-600">Add and manage your website monitoring</p>
+                  </div>
+                </div>
 
-          {/* Validator registration component */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-          >
-            <ValidatorRegistration />
-          </motion.div>
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+                  <div className="grid lg:grid-cols-3 gap-6">
+                    {/* Add Website Form */}
+                    <div className="lg:col-span-2 space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Website URL
+                        </label>
+                        <div className="flex gap-3">
+                          <input
+                            type="url"
+                            placeholder="https://your-website.com"
+                            value={websiteUrl}
+                            onChange={(e) => setWebsiteUrl(e.target.value)}
+                            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={handleWebsiteSubmission}
+                            disabled={formLoading}
+                            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                          >
+                            {formLoading ? (
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                              <Plus className="w-5 h-5" />
+                            )}
+                            {formLoading ? 'Adding...' : 'Add Website'}
+                          </motion.button>
+                        </div>
+                      </div>
 
-          {/* Preview of what's coming after registration */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="space-y-8"
-          >
-            <div className="text-center">
-              <h3 className="text-3xl font-bold text-gray-900 mb-4">What You'll Get After Registration</h3>
-              <p className="text-lg text-gray-600 mb-8">
-                Once you complete validator registration, you'll have access to these contribution methods:
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 opacity-75">
-              {contributionMethods.slice(0, 3).map((method, index) => (
-                <motion.div
-                  key={method.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.7 + (index * 0.1) }}
-                  className="relative"
-                >
-                  {/* Overlay to show it's coming soon */}
-                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-2xl flex items-center justify-center z-10">
-                    <div className="text-center">
-                      <div className="text-3xl mb-3">🔒</div>
-                      <div className="font-semibold text-gray-700">Available After Registration</div>
+                      {error && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                          {error}
+                        </div>
+                      )}
+
+                      {success && (
+                        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 text-sm flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4" />
+                          {success}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Monitoring Info */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-medium text-gray-900 mb-3">Monitoring Details</h4>
+                      <div className="space-y-2 text-sm text-gray-600">
+                        <div className="flex justify-between">
+                          <span>Check Interval:</span>
+                          <span className="font-medium">10 minutes</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Session Duration:</span>
+                          <span className="font-medium">80 minutes</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Cost per Session:</span>
+                          <span className="font-medium">$2.40</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <DashboardCard method={method} />
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        </motion.div>
-      ) : (
-        // Content for validated users: show full dashboard
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="space-y-8"
-        >
-          {/* Stats overview for validated users */}
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">Your Contribution Overview</h2>
-            <ContributionStats stats={userStats} />
-          </div>
+                </div>
+              </section>
 
-          {/* Contribution methods for validated users */}
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-3xl font-bold text-gray-900">Contribution Methods</h2>
-              <div className="text-sm text-gray-600">
-                {contributionMethods.filter(m => m.active).length} of {contributionMethods.length} methods active
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-              {contributionMethods.map((method, index) => (
-                <motion.div
-                  key={method.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <DashboardCard method={method} />
-                </motion.div>
-              ))}
-            </div>
-          </div>
-
-          {/* Additional dashboard sections for validated users */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Recent activity section */}
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-              className="bg-white rounded-2xl border border-gray-200 p-8"
-            >
-              <div className="flex items-center gap-3 mb-6">
-                <Activity className="w-6 h-6 text-gray-600" />
-                <h3 className="text-xl font-bold text-gray-900">Recent Activity</h3>
-              </div>
-              <div className="space-y-4">
-                {[
-                  { action: 'Website monitoring task completed', reward: '+0.05 SOL', time: '2 min ago' },
-                  { action: 'Network metrics submitted', reward: '+0.08 SOL', time: '15 min ago' },
-                  { action: 'Geographic data collected', reward: '+0.04 SOL', time: '1 hour ago' },
-                  { action: 'Computing task processed', reward: '+0.12 SOL', time: '2 hours ago' }
-                ].map((activity, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                    <div>
-                      <div className="font-medium text-gray-900">{activity.action}</div>
-                      <div className="text-sm text-gray-500">{activity.time}</div>
+              {/* Validator Registration CTA */}
+              <section>
+                <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-8 text-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
+                        <Shield className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-semibold mb-1">Become a Validator</h3>
+                        <p className="text-gray-300">Earn SOL tokens by contributing to the network</p>
+                      </div>
                     </div>
-                    <div className="text-emerald-600 font-semibold">{activity.reward}</div>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setShowValidatorModal(true)}
+                      className="bg-white text-gray-900 px-6 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+                    >
+                      Get Started
+                    </motion.button>
                   </div>
-                ))}
-              </div>
+                </div>
+              </section>
             </motion.div>
-
-            {/* Network status section */}
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-white rounded-2xl border border-gray-200 p-8"
+          ) : (
+            // Validator Dashboard
+            <motion.div
+              key="validator"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-8"
             >
-              <div className="flex items-center gap-3 mb-6">
-                <Users className="w-6 h-6 text-gray-600" />
-                <h3 className="text-xl font-bold text-gray-900">Network Status</h3>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                  <span className="text-gray-700">Active Validators</span>
-                  <span className="font-semibold text-gray-900">12,847</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                  <span className="text-gray-700">Websites Monitored</span>
-                  <span className="font-semibold text-gray-900">3,421</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-xl">
-                  <span className="text-blue-700">Your Validator Rank</span>
-                  <span className="font-semibold text-blue-600">#247</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl">
-                  <div className="flex items-center gap-2">
+              {/* Validator Status Overview */}
+              <section>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-semibold text-gray-900">Validator Status</h2>
+                    <p className="text-gray-600">Monitor your validator performance and earnings</p>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
                     <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                    <span className="text-emerald-700">Network Health</span>
+                    Active
                   </div>
-                  <span className="font-semibold text-emerald-600">Excellent</span>
                 </div>
-              </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                  <div className="bg-white rounded-xl border border-gray-200 p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp className="w-4 h-4 text-emerald-600" />
+                      <span className="text-sm text-gray-600">Today's Earnings</span>
+                    </div>
+                    <div className="text-2xl font-bold text-gray-900">0.24 SOL</div>
+                    <div className="text-sm text-emerald-600">+12% from yesterday</div>
+                  </div>
+                  
+                  <div className="bg-white rounded-xl border border-gray-200 p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Globe className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm text-gray-600">Active Tasks</span>
+                    </div>
+                    <div className="text-2xl font-bold text-gray-900">23</div>
+                    <div className="text-sm text-gray-600">Monitoring websites</div>
+                  </div>
+                  
+                  <div className="bg-white rounded-xl border border-gray-200 p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Award className="w-4 h-4 text-purple-600" />
+                      <span className="text-sm text-gray-600">Global Rank</span>
+                    </div>
+                    <div className="text-2xl font-bold text-gray-900">#247</div>
+                    <div className="text-sm text-gray-600">Out of 12,847</div>
+                  </div>
+                  
+                  <div className="bg-white rounded-xl border border-gray-200 p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <BarChart3 className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm text-gray-600">Uptime</span>
+                    </div>
+                    <div className="text-2xl font-bold text-gray-900">99.8%</div>
+                    <div className="text-sm text-emerald-600">Excellent</div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Contribution Methods */}
+              <section>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-semibold text-gray-900">Contribution Methods</h2>
+                    <p className="text-gray-600">Manage your active contribution streams</p>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {contributionMethods.filter(m => m.active).length} of {contributionMethods.length} active
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {contributionMethods.map((method, index) => (
+                    <motion.div
+                      key={method.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <DashboardCard method={method} />
+                    </motion.div>
+                  ))}
+                </div>
+              </section>
+
+              {/* Performance Overview */}
+              <section>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Recent Activity */}
+                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+                    <div className="flex items-center gap-3 mb-6">
+                      <Activity className="w-5 h-5 text-gray-600" />
+                      <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+                    </div>
+                    <div className="space-y-4">
+                      {[
+                        { action: 'Website monitoring completed', reward: '+0.05 SOL', time: '2 min ago', type: 'website' },
+                        { action: 'Network metrics submitted', reward: '+0.08 SOL', time: '15 min ago', type: 'network' },
+                        { action: 'Geographic data collected', reward: '+0.04 SOL', time: '1 hour ago', type: 'geo' },
+                        { action: 'Computing task processed', reward: '+0.12 SOL', time: '2 hours ago', type: 'compute' }
+                      ].map((activity, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                              activity.type === 'website' ? 'bg-blue-100 text-blue-600' :
+                              activity.type === 'network' ? 'bg-emerald-100 text-emerald-600' :
+                              activity.type === 'geo' ? 'bg-amber-100 text-amber-600' :
+                              'bg-purple-100 text-purple-600'
+                            }`}>
+                              {activity.type === 'website' ? <Globe className="w-4 h-4" /> :
+                               activity.type === 'network' ? <BarChart3 className="w-4 h-4" /> :
+                               activity.type === 'geo' ? <Activity className="w-4 h-4" /> :
+                               <Zap className="w-4 h-4" />}
+                            </div>
+                            <div>
+                              <div className="font-medium text-gray-900 text-sm">{activity.action}</div>
+                              <div className="text-xs text-gray-500 flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {activity.time}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-emerald-600 font-semibold text-sm">{activity.reward}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Network Stats */}
+                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+                    <div className="flex items-center gap-3 mb-6">
+                      <Users className="w-5 h-5 text-gray-600" />
+                      <h3 className="text-lg font-semibold text-gray-900">Network Overview</h3>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="p-4 bg-emerald-50 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm text-emerald-700">Monthly Projection</div>
+                            <div className="text-xl font-bold text-emerald-600">7.2 SOL</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-emerald-700">USD Value</div>
+                            <div className="text-lg font-semibold text-emerald-600">~$450</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-3 bg-gray-50 rounded-lg">
+                          <div className="text-lg font-bold text-gray-900">12,847</div>
+                          <div className="text-xs text-gray-600">Total Validators</div>
+                        </div>
+                        <div className="text-center p-3 bg-gray-50 rounded-lg">
+                          <div className="text-lg font-bold text-gray-900">3,421</div>
+                          <div className="text-xs text-gray-600">Websites Monitored</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
             </motion.div>
-          </div>
-        </motion.div>
-      )}
+          )}
+        </AnimatePresence>
+
+        {/* Validator Registration Modal */}
+        <AnimatePresence>
+          {showValidatorModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setShowValidatorModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ValidatorRegistration />
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setShowValidatorModal(false)}
+                  className="w-full mt-6 bg-gray-100 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Close
+                </motion.button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </Layout>
   );
 };
 
-export default Home;
+export default Home
