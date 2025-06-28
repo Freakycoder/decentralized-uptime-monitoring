@@ -8,3 +8,4 @@ pub mod reward;
 pub mod reward_summary;
 pub mod website_register;
 pub mod website_performance;
+pub mod notification;

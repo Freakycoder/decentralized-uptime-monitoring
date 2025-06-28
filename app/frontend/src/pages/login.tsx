@@ -100,6 +100,7 @@ const Login = () => {
                   <div className="font-semibold text-gray-900 mb-2 text-lg">Privacy-First Platform</div>
                   <div className="text-gray-600">Anonymous data sharing with complete privacy controls</div>
                 </div>
+                
               </div>
               
               <div className="flex items-start gap-5">
