@@ -8,8 +8,10 @@ import {
   EyeOff, 
   ArrowRight, 
   CheckCircle, 
-  DollarSignIcon,
-  LockIcon
+  DollarSign,
+  Lock,
+  Zap,
+  Globe
 } from 'lucide-react';
 
 const Login = () => {
@@ -20,15 +22,6 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [focusedField, setFocusedField] = useState<string | null>(null);
-
-  // Real-time stats simulation
-  const [liveStats, setLiveStats] = useState({
-    activeUsers: 12847,
-    totalRewards: 50000,
-    onlineValidators: 3421,
-    avgEarnings: 2.4
-  });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +61,13 @@ const Login = () => {
             transition={{ delay: 0.2, duration: 0.6 }}
             className="max-w-xl"
           >
+            {/* Logo */}
+            <div className="flex items-center gap-3 mb-12">
+              <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center">
+                <div className="w-6 h-6 bg-white rounded-sm transform rotate-45"></div>
+              </div>
+              <span className="text-2xl font-bold text-gray-900">DataContrib</span>
+            </div>
 
             {/* Hero Content */}
             <h1 className="text-4xl font-bold text-gray-900 mb-6 leading-tight">
@@ -84,7 +84,7 @@ const Login = () => {
             <div className="space-y-8 mb-12">
               <div className="flex items-start gap-5">
                 <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center flex-shrink-0">
-                 <DollarSignIcon></DollarSignIcon>
+                  <DollarSign className="w-6 h-6 text-gray-600" />
                 </div>
                 <div>
                   <div className="font-semibold text-gray-900 mb-2 text-lg">Passive Income Generation</div>
@@ -94,7 +94,7 @@ const Login = () => {
               
               <div className="flex items-start gap-5">
                 <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center flex-shrink-0">
-                  <LockIcon></LockIcon>
+                  <Lock className="w-6 h-6 text-gray-600" />
                 </div>
                 <div>
                   <div className="font-semibold text-gray-900 mb-2 text-lg">Privacy-First Platform</div>
@@ -104,7 +104,7 @@ const Login = () => {
               
               <div className="flex items-start gap-5">
                 <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">⚡</span>
+                  <Zap className="w-6 h-6 text-gray-600" />
                 </div>
                 <div>
                   <div className="font-semibold text-gray-900 mb-2 text-lg">Real-time Rewards</div>
@@ -114,12 +114,22 @@ const Login = () => {
               
               <div className="flex items-start gap-5">
                 <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">🌐</span>
+                  <Globe className="w-6 h-6 text-gray-600" />
                 </div>
                 <div>
                   <div className="font-semibold text-gray-900 mb-2 text-lg">Global Network</div>
                   <div className="text-gray-600">Join contributors worldwide in building better internet</div>
                 </div>
+              </div>
+            </div>
+
+            {/* Trust indicators */}
+            <div className="pt-6 border-t border-gray-200">
+              <div className="text-gray-500 mb-3">Trusted by contributors worldwide</div>
+              <div className="flex items-center gap-6 text-sm text-gray-400">
+                <span>• Secure Platform</span>
+                <span>• 24/7 Support</span>
+                <span>• Fair Rewards</span>
               </div>
             </div>
           </motion.div>

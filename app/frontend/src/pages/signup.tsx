@@ -1,7 +1,19 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Eye, 
+  EyeOff, 
+  ArrowRight, 
+  CheckCircle, 
+  DollarSign,
+  Lock,
+  Zap,
+  Globe,
+  Shield,
+  Users
+} from 'lucide-react';
 import axios from 'axios';
 
 const Signup = () => {
@@ -12,6 +24,8 @@ const Signup = () => {
     password: '',
     confirmPassword: ''
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -82,7 +96,7 @@ const Signup = () => {
             </div>
 
             {/* Hero Content */}
-            <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
+            <h1 className="text-4xl font-bold text-gray-900 mb-6 leading-tight">
               Start earning with 
               <span className="bg-teal-100 px-3 py-1 rounded-lg ml-2">digital data</span>
             </h1>
@@ -96,7 +110,7 @@ const Signup = () => {
             <div className="space-y-8 mb-12">
               <div className="flex items-start gap-5">
                 <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">💰</span>
+                  <DollarSign className="w-6 h-6 text-gray-600" />
                 </div>
                 <div>
                   <div className="font-semibold text-gray-900 mb-2 text-lg">Earn While You Sleep</div>
@@ -106,7 +120,7 @@ const Signup = () => {
               
               <div className="flex items-start gap-5">
                 <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">🔒</span>
+                  <Lock className="w-6 h-6 text-gray-600" />
                 </div>
                 <div>
                   <div className="font-semibold text-gray-900 mb-2 text-lg">Privacy Protected</div>
@@ -116,11 +130,21 @@ const Signup = () => {
               
               <div className="flex items-start gap-5">
                 <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">⚡</span>
+                  <Zap className="w-6 h-6 text-gray-600" />
                 </div>
                 <div>
                   <div className="font-semibold text-gray-900 mb-2 text-lg">Instant Rewards</div>
                   <div className="text-gray-600">Real-time SOL payments directly to your wallet</div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-5">
+                <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <Users className="w-6 h-6 text-gray-600" />
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-900 mb-2 text-lg">Global Community</div>
+                  <div className="text-gray-600">Join thousands of contributors worldwide</div>
                 </div>
               </div>
             </div>
@@ -139,7 +163,7 @@ const Signup = () => {
       </div>
 
       {/* Right Side - Signup Form */}
-<div className="flex-1 lg:w-5/12 xl:w-5/12 flex flex-col justify-center px-8 lg:px-12 py-12 bg-white border-l border-gray-100">
+      <div className="flex-1 lg:w-5/12 xl:w-5/12 flex flex-col justify-center px-8 lg:px-12 py-12 bg-white border-l border-gray-100">
         <motion.div 
           initial={{ x: 50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
@@ -155,20 +179,23 @@ const Signup = () => {
           </div>
 
           <div className="mb-10">
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">Create account</h2>
-            <p className="text-gray-600 text-lg">Join the data contribution network</p>
+            <h2 className="text-4xl font-bold text-gray-900 mb-3">Create account</h2>
+            <p className="text-gray-500 text-lg">Join the data contribution network</p>
           </div>
 
           <form onSubmit={handleSignup} className="space-y-6">
-            {error && (
-              <motion.div 
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="p-4 text-sm bg-red-50 text-red-700 rounded-xl border border-red-200"
-              >
-                {error}
-              </motion.div>
-            )}
+            <AnimatePresence>
+              {error && (
+                <motion.div 
+                  initial={{ scale: 0.95, opacity: 0, height: 0 }}
+                  animate={{ scale: 1, opacity: 1, height: 'auto' }}
+                  exit={{ scale: 0.95, opacity: 0, height: 0 }}
+                  className="p-4 text-sm bg-red-50 text-red-700 rounded-xl border border-red-200"
+                >
+                  {error}
+                </motion.div>
+              )}
+            </AnimatePresence>
             
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-3">
@@ -189,30 +216,52 @@ const Signup = () => {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-3">
                 Password
               </label>
-              <input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200"
-                required
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="w-full px-4 py-4 pr-12 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200"
+                  required
+                />
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </motion.button>
+              </div>
             </div>
             
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-3">
                 Confirm password
               </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200"
-                required
-              />
+              <div className="relative">
+                <input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  className="w-full px-4 py-4 pr-12 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200"
+                  required
+                />
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </motion.button>
+              </div>
             </div>
             
             <motion.button
@@ -220,9 +269,23 @@ const Signup = () => {
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading}
-              className="w-full bg-black text-white py-4 px-4 rounded-xl font-medium hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              className="w-full bg-black text-white py-4 px-4 rounded-xl font-medium hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-3"
             >
-              {loading ? 'Creating account...' : 'Create account'}
+              {loading ? (
+                <>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                  />
+                  Creating account...
+                </>
+              ) : (
+                <>
+                  <span>Create account</span>
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
             </motion.button>
           </form>
 
@@ -232,6 +295,22 @@ const Signup = () => {
               Sign in
             </Link>
           </div>
+
+          {/* Enhanced Security Note */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+            className="mt-8 p-4 bg-emerald-50 border border-emerald-200 rounded-xl"
+          >
+            <div className="flex items-center gap-3">
+              <Shield className="w-5 h-5 text-emerald-600" />
+              <div>
+                <div className="text-emerald-800 font-medium text-sm">Secure Registration</div>
+                <div className="text-emerald-700 text-xs">Your data is protected with enterprise-grade security</div>
+              </div>
+            </div>
+          </motion.div>
         </motion.div>
       </div>
     </motion.div>

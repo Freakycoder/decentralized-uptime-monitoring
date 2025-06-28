@@ -1,4 +1,3 @@
-// src/pages/website-monitor.tsx
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../components/layout/Layout';
@@ -271,7 +270,7 @@ const WebsiteMonitorPage = () => {
                   whileTap={{ scale: 0.98 }}
                   onClick={handleStartMonitoring}
                   disabled={formLoading}
-                  className="w-full bg-blue-600 text-white py-4 px-6 rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-3"
+                  className="w-full bg-black text-white py-4 px-6 rounded-xl font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-3"
                 >
                   {formLoading ? (
                     <>

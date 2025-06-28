@@ -9,17 +9,17 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = 'default', padding = 'md', ...props }, ref) => {
     const variants = {
-      default: "bg-card border border-border",
-      bordered: "bg-card border-2 border-border",
-      elevated: "bg-card shadow-lg border border-border/50",
-      glass: "bg-card/80 backdrop-blur-sm border border-white/10"
+      default: "bg-white border border-gray-200 shadow-sm",
+      bordered: "bg-white border-2 border-gray-200",
+      elevated: "bg-white shadow-lg border border-gray-200/50",
+      glass: "bg-white/80 backdrop-blur-sm border border-gray-200/50"
     }
     
     return (
       <div
         ref={ref}
         className={cn(
-          "rounded-lg transition-all duration-200",
+          "rounded-xl transition-all duration-200",
           variants[variant],
           className
         )}
@@ -49,7 +49,7 @@ const CardTitle = React.forwardRef<
   <h3
     ref={ref}
     className={cn(
-      "text-xl font-semibold leading-none tracking-tight text-foreground",
+      "text-xl font-semibold leading-none tracking-tight text-gray-900",
       className
     )}
     {...props}
@@ -63,7 +63,7 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("text-sm text-gray-600", className)}
     {...props}
   />
 ))
@@ -89,8 +89,6 @@ const CardFooter = React.forwardRef<
 ))
 CardFooter.displayName = "CardFooter"
 
-// Additional Card Components for Professional Design
-
 const CardStat = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & {
@@ -103,29 +101,29 @@ const CardStat = React.forwardRef<
 >(({ className, title, value, description, icon, trend, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("p-4 rounded-lg bg-muted/50", className)}
+    className={cn("p-4 rounded-xl bg-gray-50", className)}
     {...props}
   >
     <div className="flex items-start justify-between">
       <div className="flex-1">
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
+        <p className="text-sm font-medium text-gray-600">{title}</p>
         <div className="flex items-baseline gap-2">
-          <p className="text-2xl font-semibold text-foreground">{value}</p>
+          <p className="text-2xl font-semibold text-gray-900">{value}</p>
           {trend && (
             <span className={cn(
               "text-xs font-medium",
-              trend.isPositive ? "text-green-600" : "text-red-600"
+              trend.isPositive ? "text-emerald-600" : "text-red-600"
             )}>
               {trend.isPositive ? "+" : ""}{trend.value}%
             </span>
           )}
         </div>
         {description && (
-          <p className="text-xs text-muted-foreground mt-1">{description}</p>
+          <p className="text-xs text-gray-500 mt-1">{description}</p>
         )}
       </div>
       {icon && (
-        <div className="p-2 rounded-md bg-background">
+        <div className="p-2 rounded-lg bg-white">
           {icon}
         </div>
       )}

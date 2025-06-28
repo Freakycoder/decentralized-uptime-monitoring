@@ -1,4 +1,3 @@
-// src/components/layout/Header.tsx
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
@@ -27,7 +26,7 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={toggleTheme}
-      className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors duration-200"
+      className="w-10 h-10 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 flex items-center justify-center transition-all duration-200 shadow-sm"
     >
       {theme === 'light' ? (
         <Moon className="h-5 w-5 text-gray-600" />
@@ -36,7 +35,7 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
       )}
     </motion.button>
   ) : (
-    <div className="h-10 w-10 bg-gray-100 rounded-xl animate-pulse"></div>
+    <div className="h-10 w-10 bg-white border border-gray-200 rounded-xl animate-pulse"></div>
   );
 
   return (
@@ -44,11 +43,11 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm"
+      className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm"
     >
       <div className="flex justify-between items-center px-6 lg:px-8 py-4">
         <div className="flex items-center gap-4">
-          <div className="lg:hidden w-16"></div> {/* Spacer for mobile menu button */}
+          <div className="lg:hidden w-16"></div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
             <div className="text-sm text-gray-500">
@@ -73,7 +72,7 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
           <motion.button 
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors duration-200"
+            className="w-10 h-10 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 flex items-center justify-center transition-all duration-200 shadow-sm"
           >
             <Settings className="h-5 w-5 text-gray-600" />
           </motion.button>

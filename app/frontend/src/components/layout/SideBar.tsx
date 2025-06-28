@@ -1,11 +1,10 @@
-// src/components/layout/SideBar.tsx
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { contributionMethods } from '../../lib/mockData';
 import { cn, getContributionIcon } from '../../lib/utils';
-import { X, Menu, Home, Bell, LogOut } from 'lucide-react';
+import { X, Menu, Home, Bell, LogOut, User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Sidebar = () => {
@@ -41,10 +40,10 @@ const Sidebar = () => {
       initial={{ x: -20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="flex flex-col h-full bg-white border-r border-gray-100"
+      className="flex flex-col h-full bg-white border-r border-gray-200 shadow-lg"
     >
       {/* Logo Section */}
-      <div className="flex items-center gap-3 px-6 py-6 border-b border-gray-100">
+      <div className="flex items-center gap-3 px-6 py-6 border-b border-gray-200">
         <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center">
           <div className="w-5 h-5 bg-white rounded-sm transform rotate-45"></div>
         </div>
@@ -129,10 +128,10 @@ const Sidebar = () => {
       </div>
 
       {/* User Profile & Logout */}
-      <div className="border-t border-gray-100 p-4 space-y-3">
+      <div className="border-t border-gray-200 p-4 space-y-3">
         <div className="flex items-center gap-3 px-2">
           <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
-            <span className="text-lg font-semibold text-gray-600">JD</span>
+            <User className="w-5 h-5 text-gray-600" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-gray-900 text-sm truncate">John Doe</div>
@@ -183,7 +182,7 @@ const Sidebar = () => {
           x: isDesktop || mobileOpen ? 0 : "-100%"
         }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="fixed left-0 top-0 h-full w-72 z-50 lg:z-auto shadow-xl lg:shadow-none"
+        className="fixed left-0 top-0 h-full w-72 z-50 lg:z-auto"
       >
         {/* Mobile close button */}
         {mobileOpen && (

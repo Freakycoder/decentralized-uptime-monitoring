@@ -1,4 +1,3 @@
-// src/components/dashboard/DashboardCard.tsx
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ContributionMethod } from '../../types';
@@ -72,8 +71,8 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ method }) => {
             <div>
               <h3 className="text-xl font-bold text-gray-900 mb-1">{method.name}</h3>
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${method.active ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                <span className={`text-sm font-medium ${method.active ? 'text-green-600' : 'text-gray-500'}`}>
+                <div className={`w-2 h-2 rounded-full ${method.active ? 'bg-emerald-500' : 'bg-gray-400'}`}></div>
+                <span className={`text-sm font-medium ${method.active ? 'text-emerald-600' : 'text-gray-500'}`}>
                   {method.active ? 'Active' : 'Inactive'}
                 </span>
               </div>

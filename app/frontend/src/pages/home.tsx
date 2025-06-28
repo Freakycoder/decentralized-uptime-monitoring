@@ -1,4 +1,3 @@
-// app/frontend/src/pages/home.tsx
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -19,7 +18,8 @@ import {
   Zap,
   Award,
   Clock,
-  TrendingUp
+  TrendingUp,
+  DollarSign
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -117,6 +117,21 @@ const Home = () => {
               exit={{ opacity: 0 }}
               className="space-y-8"
             >
+              {/* Welcome Banner */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-8">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center">
+                      <Globe className="h-8 w-8 text-blue-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-3xl font-bold text-gray-900">Welcome to DataContrib</h2>
+                      <p className="text-lg text-gray-600 mt-2">Start monitoring websites and earning rewards</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Website Monitoring Section */}
               <section>
                 <div className="flex items-center justify-between mb-6">
@@ -140,14 +155,14 @@ const Home = () => {
                             placeholder="https://your-website.com"
                             value={websiteUrl}
                             onChange={(e) => setWebsiteUrl(e.target.value)}
-                            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
                           />
                           <motion.button
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={handleWebsiteSubmission}
                             disabled={formLoading}
-                            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                            className="bg-black text-white px-6 py-3 rounded-xl font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                           >
                             {formLoading ? (
                               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -160,13 +175,13 @@ const Home = () => {
                       </div>
 
                       {error && (
-                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
                           {error}
                         </div>
                       )}
 
                       {success && (
-                        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 text-sm flex items-center gap-2">
+                        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm flex items-center gap-2">
                           <CheckCircle className="w-4 h-4" />
                           {success}
                         </div>
@@ -174,7 +189,7 @@ const Home = () => {
                     </div>
 
                     {/* Monitoring Info */}
-                    <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="bg-gray-50 rounded-xl p-4">
                       <h4 className="font-medium text-gray-900 mb-3">Monitoring Details</h4>
                       <div className="space-y-2 text-sm text-gray-600">
                         <div className="flex justify-between">
@@ -212,7 +227,7 @@ const Home = () => {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => setShowValidatorModal(true)}
-                      className="bg-white text-gray-900 px-6 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+                      className="bg-white text-gray-900 px-6 py-3 rounded-xl font-medium hover:bg-gray-100 transition-colors"
                     >
                       Get Started
                     </motion.button>
@@ -231,52 +246,59 @@ const Home = () => {
             >
               {/* Validator Status Overview */}
               <section>
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-2xl font-semibold text-gray-900">Validator Status</h2>
-                    <p className="text-gray-600">Monitor your validator performance and earnings</p>
+                <div className="bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200 rounded-2xl p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center">
+                        <Shield className="h-8 w-8 text-emerald-600" />
+                      </div>
+                      <div>
+                        <h2 className="text-3xl font-bold text-gray-900">Validator Dashboard</h2>
+                        <p className="text-lg text-gray-600 mt-2">Monitor your validator performance and earnings</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                      Active
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                    Active
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                  <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="w-4 h-4 text-emerald-600" />
-                      <span className="text-sm text-gray-600">Today's Earnings</span>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-white/40">
+                      <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp className="w-4 h-4 text-emerald-600" />
+                        <span className="text-sm text-gray-600">Today's Earnings</span>
+                      </div>
+                      <div className="text-2xl font-bold text-gray-900">0.24 SOL</div>
+                      <div className="text-sm text-emerald-600">+12% from yesterday</div>
                     </div>
-                    <div className="text-2xl font-bold text-gray-900">0.24 SOL</div>
-                    <div className="text-sm text-emerald-600">+12% from yesterday</div>
-                  </div>
-                  
-                  <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Globe className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm text-gray-600">Active Tasks</span>
+                    
+                    <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-white/40">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Globe className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm text-gray-600">Active Tasks</span>
+                      </div>
+                      <div className="text-2xl font-bold text-gray-900">23</div>
+                      <div className="text-sm text-gray-600">Monitoring websites</div>
                     </div>
-                    <div className="text-2xl font-bold text-gray-900">23</div>
-                    <div className="text-sm text-gray-600">Monitoring websites</div>
-                  </div>
-                  
-                  <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Award className="w-4 h-4 text-purple-600" />
-                      <span className="text-sm text-gray-600">Global Rank</span>
+                    
+                    <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-white/40">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Award className="w-4 h-4 text-purple-600" />
+                        <span className="text-sm text-gray-600">Global Rank</span>
+                      </div>
+                      <div className="text-2xl font-bold text-gray-900">#247</div>
+                      <div className="text-sm text-gray-600">Out of 12,847</div>
                     </div>
-                    <div className="text-2xl font-bold text-gray-900">#247</div>
-                    <div className="text-sm text-gray-600">Out of 12,847</div>
-                  </div>
-                  
-                  <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <BarChart3 className="w-4 h-4 text-gray-600" />
-                      <span className="text-sm text-gray-600">Uptime</span>
+                    
+                    <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-white/40">
+                      <div className="flex items-center gap-2 mb-2">
+                        <BarChart3 className="w-4 h-4 text-gray-600" />
+                        <span className="text-sm text-gray-600">Uptime</span>
+                      </div>
+                      <div className="text-2xl font-bold text-gray-900">99.8%</div>
+                      <div className="text-sm text-emerald-600">Excellent</div>
                     </div>
-                    <div className="text-2xl font-bold text-gray-900">99.8%</div>
-                    <div className="text-sm text-emerald-600">Excellent</div>
                   </div>
                 </div>
               </section>
@@ -323,9 +345,9 @@ const Home = () => {
                         { action: 'Geographic data collected', reward: '+0.04 SOL', time: '1 hour ago', type: 'geo' },
                         { action: 'Computing task processed', reward: '+0.12 SOL', time: '2 hours ago', type: 'compute' }
                       ].map((activity, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
                           <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
                               activity.type === 'website' ? 'bg-blue-100 text-blue-600' :
                               activity.type === 'network' ? 'bg-emerald-100 text-emerald-600' :
                               activity.type === 'geo' ? 'bg-amber-100 text-amber-600' :
@@ -357,7 +379,7 @@ const Home = () => {
                       <h3 className="text-lg font-semibold text-gray-900">Network Overview</h3>
                     </div>
                     <div className="space-y-4">
-                      <div className="p-4 bg-emerald-50 rounded-lg">
+                      <div className="p-4 bg-emerald-50 rounded-xl">
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="text-sm text-emerald-700">Monthly Projection</div>
@@ -371,11 +393,11 @@ const Home = () => {
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-3 bg-gray-50 rounded-lg">
+                        <div className="text-center p-3 bg-gray-50 rounded-xl">
                           <div className="text-lg font-bold text-gray-900">12,847</div>
                           <div className="text-xs text-gray-600">Total Validators</div>
                         </div>
-                        <div className="text-center p-3 bg-gray-50 rounded-lg">
+                        <div className="text-center p-3 bg-gray-50 rounded-xl">
                           <div className="text-lg font-bold text-gray-900">3,421</div>
                           <div className="text-xs text-gray-600">Websites Monitored</div>
                         </div>
@@ -423,4 +445,4 @@ const Home = () => {
   );
 };
 
-export default Home
+export default Home;

@@ -1,4 +1,3 @@
-// src/pages/notifications.tsx
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Layout from '../components/layout/Layout';

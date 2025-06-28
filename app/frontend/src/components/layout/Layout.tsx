@@ -1,4 +1,3 @@
-// src/components/layout/Layout.tsx
 import { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import Sidebar from './SideBar';
