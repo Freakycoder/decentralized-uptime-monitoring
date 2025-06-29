@@ -2,12 +2,13 @@ use crate::entities::notification;
 use crate::middlewares::validator_auth::validator_jwt_middleware;
 use crate::types::notification::{
     CreateNotificationRequest, CreateNotificationResponse, GetNotificationsResponse,
-    MarkAllReadRequest, MarkAllReadResponse, NotificationQuery, NotificationResponse
+    MarkAllReadRequest, MarkAllReadResponse, NotificationQuery, NotificationResponse,
+    UpdateNotificationRequest, UpdateNotificationResponse
 };
 use axum::{
     extract::{Path, Query, State},
     middleware,
-    routing::{get, post, put},
+    routing::{get, post, put, patch},
     Json, Router,
 };
 use sea_orm::{
@@ -19,7 +20,8 @@ use uuid::Uuid;
 pub fn notification_router() -> Router<DatabaseConnection> {
     Router::new()
         .route("/", post(create_notification))
-        .route("/user/:validator_id", get(get_user_notifications))
+        .route("/validator/:validator_id", get(get_user_notifications))
+        .route("/:notification_id", patch(update_notification))
         .route("/mark-all-read", put(mark_all_read))
         .route("/unread-count/:validator_id", get(get_unread_count))
         .layer(middleware::from_fn(validator_jwt_middleware))
@@ -124,6 +126,50 @@ async fn mark_all_read(
         Err(_) => Json(MarkAllReadResponse {
             status_code: 500,
             updated_count: 0,
+        }),
+    }
+}
+
+#[axum::debug_handler]
+async fn update_notification(
+    State(db): State<DatabaseConnection>,
+    Path(notification_id): Path<Uuid>,
+    Json(request): Json<UpdateNotificationRequest>,
+) -> Json<UpdateNotificationResponse> {
+    // First, find the notification
+    match notification::Entity::find_by_id(notification_id)
+        .one(&db)
+        .await
+    {
+        Ok(Some(notification)) => { // Model is only the read version of struct returned by DB. ActiveModel is something that can modified and send for an update to DB.
+            let mut active_model =  notification::ActiveModel::from(notification); // here we're converting model to activemodel
+
+            // Update fields if provided
+            if let Some(read) = request.read {
+                active_model.read = Set(read);
+            }
+            if let Some(action_taken) = request.action_taken {
+                active_model.action_taken = Set(Some(action_taken));
+            }
+
+            match active_model.update(&db).await {
+                Ok(updated_notification) => Json(UpdateNotificationResponse {
+                    status_code: 200,
+                    notification: Some(NotificationResponse::from(updated_notification)),
+                }),
+                Err(_) => Json(UpdateNotificationResponse {
+                    status_code: 500,
+                    notification: None,
+                }),
+            }
+        }
+        Ok(None) => Json(UpdateNotificationResponse {
+            status_code: 404,
+            notification: None,
+        }),
+        Err(_) => Json(UpdateNotificationResponse {
+            status_code: 500,
+            notification: None,
         }),
     }
 }
