@@ -41,6 +41,7 @@ async fn main() -> Result<(), std::io::Error> {
         .nest("/validator", routes::validator::validator_router().with_state(db.clone()))
         .nest("/add-website", routes::add_website::add_website_router().with_state(app_state))
         .nest("/performance-data", routes::website_performace::performance_router().with_state(db.clone()))
+        .nest("/notifications", routes::notification::notification_router().with_state(db.clone()))
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)
