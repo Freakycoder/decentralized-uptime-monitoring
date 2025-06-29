@@ -99,24 +99,22 @@ export interface LeaderboardEntry {
     rewards: number;            // Total rewards earned (in SOL)
 }
 
-/**
- * User notification
- */
+
 export interface Notification {
-  id: string;
+  id : string,
+  validator_id : string;
   title: string;
   message: string;
-  timestamp: string;
+  notification_type?: string; // 'general', 'monitoring', etc.
   read: boolean;
-  type?: string; // 'general', 'monitoring', etc.
-  data?: any; // Additional data
-  isNew?: boolean; // For highlighting new notifications
-  actionTaken?: 'accept' | 'reject'; // For monitoring tasks
+  data : {
+    url : string,
+    website_id : string
+  }
+  actionTaken?: 'accept' | 'reject';
+  created_at: number;
 }
 
-/**
- * Data structure for compute resource contributions
- */
 export interface ComputeResourceData {
     cpuUsage: number;           // CPU usage percentage
     memoryUsage: number;        // Memory usage percentage
