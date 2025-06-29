@@ -49,6 +49,18 @@ pub struct MarkAllReadResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateNotificationRequest {
+    pub read: Option<bool>,
+    pub action_taken: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateNotificationResponse {
+    pub status_code: u32,
+    pub notification: Option<NotificationResponse>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct NotificationQuery {
     pub validator_id: Uuid,
     pub notification_type: Option<String>,
