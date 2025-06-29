@@ -6,7 +6,6 @@ import axios from 'axios';
 // For simplicity in this demo, we'll create a simple UUID function instead of using a package
 const generateId = () => Math.random().toString(36).substring(2, 11);
 
-// Define the context interface
 interface NotificationsContextType {
     notifications: Notification[];
     addNotification: (title: string, message: string, type: string, data?: any) => void;
@@ -14,6 +13,8 @@ interface NotificationsContextType {
     markAllAsRead: () => void;
     unreadCount: number;
     handleNotificationAction: (id: string, action: 'accept' | 'reject') => void;
+    loading : boolean;
+    error : string | null
 }
 
 // Create the context with default values
@@ -22,21 +23,61 @@ const NotificationsContext = createContext<NotificationsContextType | undefined>
 // Provider component
 export const NotificationsProvider = ({ children }: { children: ReactNode }) => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     // Calculate unread count directly from notifications
     const unreadCount = notifications.filter(n => !n.read).length;
 
-    // Initialize notifications from mock data
-    useEffect(() => {
+    const validatorId = localStorage.getItem('validatorId');
+    const token = localStorage.getItem('authToken');
 
-        const getNotifications = async () => {
-            const response = await axios.get('http://locahost:3001/notifications/validator/validator_id'); // for now just put
-            setNotifications(response.data.notifications);
+    const loadNotifications = async () => {
+        if (!validatorId || !token) {
+            console.log('❌ No validator ID or token available');
+            setLoading(false);
+            return;
         }
-        getNotifications()
-    }, []);
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await axios.get(`http://localhost:3001/notifications/validator/${validatorId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
 
-    // Add a new notification (new ones go to the top)
+            if (response.data.status_code === 200) {
+                const convertedNotifications: Notification[] = response.data.notifications.map((notif: any) => ({
+                    id: notif.id,
+                    title: notif.title,
+                    message: notif.message,
+                    timestamp: notif.created_at,
+                    read: notif.read,
+                    type: notif.notification_type,
+                    data: notif.data,
+                    actionTaken: notif.action_taken,
+                    isNew: false,
+                }));
+                setNotifications(convertedNotifications);
+                console.log(`✅ Loaded ${convertedNotifications.length} notifications`);
+            } else {
+                setError(response.data.message || 'Failed to load notifications');
+            }
+        } catch (err: any) {
+            console.error('Error loading notifications:', err);
+            setError('Failed to load notifications. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadNotifications()
+    }, [validatorId, token]);
+
+    // Add a new notification
     const addNotification = async (title: string, message: string, type: string, data?: any) => {
         const newNotification = {
             validator_id: "",
@@ -53,15 +94,11 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
     };
 
     // Handle notification actions (accept/reject for monitoring tasks)
-    const handleNotificationAction = (id: string, action: 'accept' | 'reject') => {
+    const handleNotificationAction = async (id: string, action: 'accept' | 'reject') => {
         const notification = notifications.find(n => n.id === id);
 
         if (action === 'accept' && notification?.notification_type === 'monitoring' && notification?.data) {
-            // Send monitoring task to extension
-            const response = axios.post(`http://localhost:3001/notification/${id}` , {
-                read : true,
-                action_taken : action
-            })
+            // function to Send monitoring task to extension
             sendMonitoringTaskToExtension(notification.data.url, notification.data.website_id);
 
             console.log(`✅ Monitoring task accepted and sent to extension:`, {
@@ -69,20 +106,38 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
                 website_id: notification.data.website_id
             });
         }
+        try {
+            const response = await axios.post(`http://localhost:3001/notification/${id}`, {
+                read: true,
+                action_taken: action
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            })
 
-        setNotifications(prevNotification =>
-            prevNotification.map(notif =>
-                notif.id === id
-                    ? {
-                        ...notif,
-                        read: true,
-                        actionTaken: action,
-                    }
-                    : notif
-            )
-        );
-
-        console.log(`Notification ${id} ${action}ed`);
+            if (response.data.status_code === 200) {
+                setNotifications(prevNotification =>
+                    prevNotification.map(notif =>
+                        notif.id === id
+                            ? {
+                                ...notif,
+                                read: true,
+                                actionTaken: action,
+                            }
+                            : notif
+                    )
+                );
+                console.log(`✅ Notification ${id} ${action}ed and saved to database`);
+            }
+            else {
+                setError('Failed to update notification');
+            }
+        } catch (e) {
+            console.error('Error updating notification:', e);
+            setError('Failed to update notification');
+        }
     };
 
     // Function to communicate with extension
@@ -103,28 +158,69 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
     };
 
     // Mark a notification as read
-    const markAsRead = (id: string) => {
-        setNotifications((prevNotifications) =>
-            prevNotifications.map(notification =>
-                notification.id === id ? { ...notification, read: true } : notification
-            )
-        );
-        const response = axios.post(`http://localhost:3001/notification/${id}` , {
-                read : true
-        })
+    const markAsRead = async (id: string) => {
+        if (!token) {
+            console.error('❌ No token available');
+            return;
+        }
+        try {
+            const response = await axios.patch(`http://localhost:3001/notifications/${id}`, {
+                read: true
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (response.data.status_code === 200) {
+                setNotifications((prevNotifications) =>
+                    prevNotifications.map(notification =>
+                        notification.id === id ? { ...notification, read: true } : notification
+                    )
+                );
+                console.log(`✅ Marked notification ${id} as read`);
+            } else {
+                setError('Failed to mark notification as read');
+            }
+        } catch (err: any) {
+            console.error('Error marking as read:', err);
+            setError('Failed to mark notification as read');
+        }
     };
-    
+
     // Mark all notifications as read
-    const markAllAsRead = () => {
-        setNotifications((prevNotifications) =>
-            prevNotifications.map(notification => ({
-                ...notification,
-                read: true,
-            }))
-        );
-        const response = axios.put('http://localhost:3001/notification/mark-all-read/', {
-            validator_id : ''
-        })
+    const markAllAsRead = async() => {
+        if (!validatorId || !token) {
+            console.error('❌ No validator ID or token available');
+            return;
+        }
+
+        try {
+            const response = await axios.put('http://localhost:3001/notifications/mark-all-read', {
+                validator_id: validatorId
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (response.data.status_code === 200) {
+                setNotifications((prevNotifications) =>
+                    prevNotifications.map(notification => ({
+                        ...notification,
+                        read: true,
+                    }))
+                );
+                console.log(`✅ Marked all notifications as read (${response.data.updated_count} updated)`);
+            } else {
+                setError('Failed to mark all notifications as read');
+            }
+        } catch (err: any) {
+            console.error('Error marking all as read:', err);
+            setError('Failed to mark all notifications as read');
+        }
     };
 
     return (
@@ -135,7 +231,9 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
                 markAsRead,
                 markAllAsRead,
                 unreadCount,
-                handleNotificationAction
+                handleNotificationAction,
+                loading,
+                error
             }}
         >
             {children}
