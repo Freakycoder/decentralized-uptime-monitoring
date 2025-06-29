@@ -4,11 +4,19 @@ import { motion } from 'framer-motion';
 import Layout from '../components/layout/Layout';
 import { useNotifications } from '../contexts/NotificationsContext';
 import { formatDate } from '../lib/utils';
-import { Bell, Check, CheckCircle, XCircle, Globe, TrendingUp, Award, AlertTriangle} from 'lucide-react';
+import { Bell, Check, CheckCircle, XCircle, Globe, TrendingUp, Award, AlertTriangle, RefreshCw } from 'lucide-react';
 
 const NotificationsPage = () => {
   const [mounted, setMounted] = useState(false);
-  const { notifications, markAsRead, markAllAsRead, unreadCount, handleNotificationAction } = useNotifications();
+  const { 
+    notifications, 
+    markAsRead, 
+    markAllAsRead, 
+    unreadCount, 
+    handleNotificationAction,
+    loading,
+    error 
+  } = useNotifications();
   const [filter, setFilter] = useState<'all' | 'unread' | 'monitoring'>('all');
 
   useEffect(() => {
@@ -58,7 +66,8 @@ const NotificationsPage = () => {
     }
   });
 
-  if (!mounted) {
+  // ✅ Loading state
+  if (!mounted || loading) {
     return (
       <Layout title="Notifications">
         <div className="flex items-center justify-center h-[60vh]">
@@ -79,6 +88,27 @@ const NotificationsPage = () => {
         transition={{ duration: 0.4 }}
         className="space-y-8"
       >
+        {/* ✅ Error banner */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-50 border border-red-200 rounded-2xl p-4"
+          >
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              <div className="text-red-700">{error}</div>
+              <button
+                onClick={() => window.location.reload()}
+                className="ml-auto p-2 hover:bg-red-100 rounded-lg transition-colors"
+                title="Refresh page"
+              >
+                <RefreshCw className="h-4 w-4 text-red-500" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+
         {/* Header Section */}
         <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl p-8">
           <div className="flex items-center justify-between">
@@ -161,22 +191,6 @@ const NotificationsPage = () => {
                   transition={{ delay: index * 0.05 }}
                   className={`relative p-6 transition-all duration-300 hover:bg-gray-50 ${getNotificationBgColor(notification)}`}
                 >
-                  {/* New notification badge */}
-                  {notification.isNew && (
-                    <div className="absolute top-4 right-4">
-                      <div className="px-3 py-1 bg-blue-600 text-white text-xs rounded-full font-medium animate-pulse">
-                        NEW
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Unread indicator for non-new notifications */}
-                  {!notification.read && !notification.isNew && (
-                    <div className="absolute top-6 right-6">
-                      <div className="h-3 w-3 rounded-full bg-blue-500" />
-                    </div>
-                  )}
-                  
                   <div className="flex items-start gap-4">
                     {/* Notification icon */}
                     <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
@@ -187,14 +201,11 @@ const NotificationsPage = () => {
                     <div className="flex-grow min-w-0">
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <div className={`font-semibold mb-1 ${notification.isNew ? 'text-blue-900' : 'text-gray-900'}`}>
-                            {notification.title}
-                          </div>
                           <div className="text-gray-600 mb-3 leading-relaxed">
                             {notification.message}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {formatDate(notification.timestamp)}
+                            {notification.created_at}
                           </div>
                         </div>
 
