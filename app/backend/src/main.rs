@@ -9,6 +9,7 @@ pub mod routes;
 pub mod types;
 pub mod websocket;
 pub mod middlewares;
+pub mod cookie;
 use crate::types::websocket::AppState;
 
 #[tokio::main]

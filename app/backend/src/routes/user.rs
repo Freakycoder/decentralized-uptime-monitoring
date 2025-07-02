@@ -10,6 +10,7 @@ use axum::{
 use chrono::{Duration, Utc};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use jsonwebtoken::{EncodingKey, Header, encode};
+use tower_cookies::{Cookie,Cookies}; // Cookies is an extractor like JSON or State.
 
 pub fn user_router() -> Router<DatabaseConnection> {
     Router::new()
@@ -21,6 +22,7 @@ pub fn user_router() -> Router<DatabaseConnection> {
 #[axum::debug_handler]
 async fn signup(
     State(db): State<DatabaseConnection>,
+    cookies : Cookies,
     Json(user_data): Json<UserInput>,
 ) -> Json<SignUpResponse> {
 
