@@ -1,37 +1,34 @@
+use crate::types::cookie::CookieAppState;
 use crate::{
     entities::user,
-    types::user::{Claims, SignUpResponse, UserInput},
+    types::user::{SignUpResponse, UserInput},
 };
 use axum::{
-    Router,
     extract::{Json, State},
     routing::post,
+    Router,
 };
-use chrono::{Duration, Utc};
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
-use jsonwebtoken::{EncodingKey, Header, encode};
-use tower_cookies::{Cookie,Cookies}; // Cookies is an extractor like JSON or State.
+use cookie::Cookie;
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
+use tower_cookies::Cookies; // Cookies is an extractor like JSON or State.
 
-pub fn user_router() -> Router<DatabaseConnection> {
+pub fn user_router() -> Router<CookieAppState> {
     Router::new()
         .route("/signup", post(signup))
         .route("/signin", post(signin))
 }
-
-
 #[axum::debug_handler]
 async fn signup(
-    State(db): State<DatabaseConnection>,
-    cookies : Cookies,
+    State(app_state): State<CookieAppState>,
+    cookies: Cookies,
     Json(user_data): Json<UserInput>,
 ) -> Json<SignUpResponse> {
-
     let email = user_data.email;
     let password = user_data.password;
 
     let old_user = user::Entity::find()
         .filter(user::Column::Email.eq(&email))
-        .one(&db)
+        .one(&app_state.db)
         .await;
 
     if let Err(db_err) = old_user {
@@ -39,7 +36,7 @@ async fn signup(
         return Json(SignUpResponse {
             status_code: 500,
             message: format!("Database error occured : {}", db_err),
-            token: None,
+            user_id: None,
         });
     }
 
@@ -48,40 +45,55 @@ async fn signup(
         return Json(SignUpResponse {
             status_code: 409, //conflict status code
             message: format!("User already exist, please SignIn"),
-            token: None,
+            user_id: None,
         });
     }
 
-    let new_user= user::ActiveModel {
+    let new_user = user::ActiveModel {
         email: Set(email),
         password_hash: Set(create_hash(password)),
         ..Default::default()
     }; // this part is just creating a record to insert into db
     println!("creating new user record.");
 
-    match new_user.insert(&db).await {
+    match new_user.insert(&app_state.db).await {
         // in 'new_user.insert(&db).await' we actually insert the record into db
-        Ok(user) => Json(SignUpResponse {
-            status_code: 200,
-            message: user.id.to_string(),
-            token: Some(generate_jwt(&user.id.to_string())),
-        }),
+        Ok(user) => {
+            let session_id = app_state.session_store.create_session(user.id).await;
+
+            let session_cookie = Cookie::build(("session_id", session_id))
+                .http_only(true)
+                .secure(true) // Use HTTPS in production
+                .same_site(cookie::SameSite::Strict)
+                .max_age(cookie::time::Duration::hours(24)) // Match session expiration
+                .path("/")
+                .build();
+
+            cookies.add(session_cookie);
+
+            Json(SignUpResponse {
+                message: user.id.to_string(),
+                status_code: 200,
+                user_id: Some(user.id.to_string()),
+            })
+        }
 
         Err(err) => Json(SignUpResponse {
             status_code: 404,
             message: format!("Failed to create new user : {}", err),
-            token: None,
+            user_id: None,
         }),
     }
 }
 
 async fn signin(
-    State(db): State<DatabaseConnection>,
+    State(app_state): State<CookieAppState>,
+    cookies : Cookies,
     Json(user_data): Json<UserInput>,
 ) -> Json<SignUpResponse> {
-
     let email = user_data.email;
-   
+    let db = app_state.db;
+
     let old_user = user::Entity::find()
         .filter(user::Column::Email.eq(&email))
         .one(&db)
@@ -91,46 +103,40 @@ async fn signin(
         return Json(SignUpResponse {
             status_code: 500,
             message: format!("Database error occured : {}", db_err),
-            token: None,
+            user_id: None,
         });
     }
 
     if let Some(existing_user) = old_user.unwrap() {
+        let session_id = app_state
+            .session_store
+            .create_session(existing_user.id)
+            .await;
+
+        let session_cookie = Cookie::build(("session_id", session_id))
+            .http_only(true)
+            .secure(true)
+            .same_site(cookie::SameSite::Strict)
+            .max_age(cookie::time::Duration::hours(2))
+            .path("/")
+            .build();
+        cookies.add(session_cookie);
+        
         return Json(SignUpResponse {
             status_code: 200,
             message: format!("User found"),
-            token: Some(generate_jwt(&existing_user.id.to_string())),
+            user_id: Some(existing_user.id.to_string()),
         });
     } else {
         return Json(SignUpResponse {
             status_code: 404,
             message: format!("User not found"),
-            token: None,
+            user_id: None,
         });
     }
 }
 
-
 pub fn create_hash(unhashed_pass: String) -> String {
     let hashed_pass = bcrypt::hash(unhashed_pass, bcrypt::DEFAULT_COST).unwrap_or_default();
     hashed_pass
-}
-
-pub fn generate_jwt(user_id: &str) -> String {
-    let expiration = Utc::now()
-        .checked_add_signed(Duration::hours(3))
-        .expect("valid timestamp")
-        .timestamp() as usize;
-
-    let claims = Claims {
-        user_id: user_id.to_owned(),
-        exp: expiration,
-    };
-    let token = encode(
-        &Header::default(),
-        &claims,
-        &EncodingKey::from_secret("secret".as_ref()),
-    )
-    .unwrap();
-    token
 }
