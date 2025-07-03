@@ -81,7 +81,6 @@ impl SessionStore {
                 println!("🗑️ Removed expired session: {}", session_id);
                 return None;
             }
-            
             // Refresh the session
             session.refresh();
             println!("🔄 Refreshed session: {}", session_id);
