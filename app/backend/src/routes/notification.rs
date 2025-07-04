@@ -1,5 +1,4 @@
 use crate::entities::notification;
-use crate::middlewares::validator_auth::validator_jwt_middleware;
 use crate::types::notification::{
     CreateNotificationRequest, CreateNotificationResponse, GetNotificationsResponse,
     MarkAllReadRequest, MarkAllReadResponse, NotificationQuery, NotificationResponse,
@@ -7,7 +6,6 @@ use crate::types::notification::{
 };
 use axum::{
     extract::{Path, Query, State},
-    middleware,
     routing::{get, post, put, patch},
     Json, Router,
 };
@@ -24,7 +22,6 @@ pub fn notification_router() -> Router<DatabaseConnection> {
         .route("/:notification_id", patch(update_notification))
         .route("/mark-all-read", put(mark_all_read))
         .route("/unread-count/:validator_id", get(get_unread_count))
-        .layer(middleware::from_fn(validator_jwt_middleware))
 }
 
 #[axum::debug_handler]
