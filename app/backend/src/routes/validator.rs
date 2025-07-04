@@ -83,8 +83,7 @@ async fn verify_validator(
 
     match new_validator.insert(&app_state.db).await {
         Ok(validator) => {
-            let mut updated_session_store = app_state.session_store.clone();
-            let is_updated = updated_session_store
+            let is_updated = app_state.session_store
                 .modify_session(validator.id, &session_id.value())
                 .await;
 
