@@ -1,5 +1,4 @@
 use crate::entities::validator;
-use crate::middlewares::validator_auth::validator_jwt_middleware;
 use crate::types::cookie::CookieAppState;
 use crate::types::user::{
     ValidatorData, ValidatorInput, VerifySignatureRequest, VerifyValidatorResponse,
@@ -8,7 +7,7 @@ use crate::utils::cookie_extractor::get_authenticated_user_id;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::{debug_handler, middleware, routing::post, Json, Router};
+use axum::{debug_handler,routing::post, Json, Router};
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 use solana_sdk::{pubkey::Pubkey, signature::Signature};
 use std::str::FromStr;
@@ -19,8 +18,7 @@ pub fn validator_router() -> Router<CookieAppState> {
         .route("/wallet", post(handle_connection))
         .route(
             "/verify-validator",
-            post(verify_validator).layer(middleware::from_fn(validator_jwt_middleware)),
-        )
+            post(verify_validator))
 }
 
 #[debug_handler]
