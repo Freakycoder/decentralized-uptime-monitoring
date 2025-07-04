@@ -1,8 +1,6 @@
 use crate::entities::website_register;
-use crate::middlewares::validator_auth::validator_jwt_middleware;
 use crate::types::cookie::CookieAppState;
 use crate::utils::cookie_extractor::get_authenticated_user_id;
-use axum::middleware;
 use axum::{
     Json, Router,
     extract::State,
@@ -14,7 +12,7 @@ use crate::types::website::{AddWebsiteInput, AddWebsiteResponse};
 
 
 pub fn add_website_router() -> Router<CookieAppState> {
-    Router::new().route("/add", post(website_to_add).layer(middleware::from_fn(validator_jwt_middleware)))
+    Router::new().route("/add", post(website_to_add))
 }
 
 #[axum::debug_handler]
