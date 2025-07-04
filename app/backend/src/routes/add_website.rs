@@ -1,5 +1,7 @@
 use crate::entities::website_register;
 use crate::middlewares::validator_auth::validator_jwt_middleware;
+use crate::types::cookie::CookieAppState;
+use crate::utils::cookie_extractor::get_authenticated_user_id;
 use axum::middleware;
 use axum::{
     Json, Router,
@@ -7,24 +9,34 @@ use axum::{
     routing:: post,
 };
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
+use tower_cookies::Cookies;
 use crate::types::website::{AddWebsiteInput, AddWebsiteResponse};
-use crate::types::websocket::AppState;
 
 
-
-pub fn add_website_router() -> Router<AppState> {
+pub fn add_website_router() -> Router<CookieAppState> {
     Router::new().route("/add", post(website_to_add).layer(middleware::from_fn(validator_jwt_middleware)))
 }
 
 #[axum::debug_handler]
 async fn website_to_add(
-    State(state): State<AppState>, // state represents globally shared data in rust. it is done bcoz we cannot pass db and ws twice using State()
+    State(state): State<CookieAppState>, // state represents globally shared data in rust. it is done bcoz we cannot pass db and ws twice using State()
+    cookies : Cookies,
     Json(website_data): Json<AddWebsiteInput>,
 ) -> Json<AddWebsiteResponse> {
+
+
     let url = website_data.url_to_monitor;
-    let user_id  = website_data.user_id;
+    let user_id  = match get_authenticated_user_id(&cookies, &state.session_store).await{
+        Ok(id) => id,
+        Err(_) => {
+            return Json(AddWebsiteResponse{
+                message : "failed to get user id".to_string(),
+                status_code : 404
+            });
+        }
+    };
     let db = state.db;
-    let ws = state.ws_manager;
+    let ws = state.ws;
 
     let existing_url = website_register::Entity::find()
         .filter(website_register::Column::WebsiteUrl.eq(&url))
