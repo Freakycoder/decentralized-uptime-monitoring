@@ -8,10 +8,9 @@ pub mod entities;
 pub mod routes;
 pub mod types;
 pub mod websocket;
-pub mod middlewares;
 pub mod cookie;
 pub mod utils;
-use crate::types::websocket::AppState;
+use crate::{cookie::manager::SessionStore, types::{cookie::CookieAppState, websocket::AppState}};
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -31,9 +30,11 @@ async fn main() -> Result<(), std::io::Error> {
     println!("Database connected successfully!");
 
     let ws_manager = Arc::new(WebSocketManager::new()); // the WebSocketManager::new() is invoking the constructor present in websocket class, which initializes the connectin and broadcast
-    let app_state = AppState{ // this is done bcoz we cannot pass db and ws individually by using with_state twice.
+    let cookie_manager = Arc::new(SessionStore::new());
+    let app_state = CookieAppState{ // this is done bcoz we cannot pass db and ws individually by using with_state twice.
         db : db.clone(),
-        ws_manager : ws_manager.clone()
+        ws : ws_manager.clone(),
+        session_store : cookie_manager.clone()
     };
 
     let app = Router::new()
