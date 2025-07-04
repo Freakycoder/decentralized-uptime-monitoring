@@ -11,7 +11,7 @@ pub struct UserInput{
 pub struct SignUpResponse{
     pub status_code : u32,
     pub message : String,
-    pub token : Option<String>
+    pub user_id : Option<String>
 }
 
 
