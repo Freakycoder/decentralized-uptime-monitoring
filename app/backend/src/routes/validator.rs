@@ -38,7 +38,7 @@ async fn verify_validator(
 
     let user_id = match get_authenticated_user_id(&cookies, &app_state.session_store).await {
         Ok(id) => id,
-        Err(status) => {
+        Err(_) => {
             return Json(VerifyValidatorResponse {
                 status_code: 404,
                 message: "Failed to authenticate and get user id".to_string(),
