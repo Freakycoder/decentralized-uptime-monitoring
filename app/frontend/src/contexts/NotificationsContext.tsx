@@ -80,7 +80,7 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
     // Add a new notification
     const addNotification = async (title: string, message: string, type: string, data?: any) => {
         const newNotification = {
-            validator_id: "",
+            validator_id: validatorId,
             title,
             message,
             created_at: Date.now(),
