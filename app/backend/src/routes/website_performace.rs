@@ -1,19 +1,16 @@
 use axum::{
     extract::State,
-    middleware,
     routing::post,
     Json, Router,
 };
 use sea_orm::{ActiveModelTrait, Set, DatabaseConnection};
 use crate::entities::website_performance;
-use crate::middlewares::validator_auth::validator_jwt_middleware;
 use crate::types::performance_data::{PerformanceOutput, PerfomanceDataInput};
 
 pub fn performance_router() -> Router<DatabaseConnection> {
     Router::new().route(
         "/add",
         post(add_performance_data)
-            .layer(middleware::from_fn(validator_jwt_middleware)),
     )
 }
 
