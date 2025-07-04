@@ -30,7 +30,7 @@ async fn main() -> Result<(), std::io::Error> {
     println!("Database connected successfully!");
 
     let ws_manager = Arc::new(WebSocketManager::new()); // the WebSocketManager::new() is invoking the constructor present in websocket class, which initializes the connectin and broadcast
-    let cookie_manager = Arc::new(SessionStore::new());
+    let cookie_manager = Arc::new(SessionStore::new()); // same here as the above, initializing an in memory hashmap.
     let app_state = CookieAppState{ // this is done bcoz we cannot pass db and ws individually by using with_state twice.
         db : db.clone(),
         ws : ws_manager.clone(),
@@ -39,9 +39,9 @@ async fn main() -> Result<(), std::io::Error> {
 
     let app = Router::new()
         .route("/", get(sayhello))
-        .nest("/user", routes::user::user_router().with_state(db.clone()))
+        .nest("/user", routes::user::user_router().with_state(app_state.clone()))
         .nest("/ws", routes::websocket::websocket_router(ws_manager))
-        .nest("/validator", routes::validator::validator_router().with_state(db.clone()))
+        .nest("/validator", routes::validator::validator_router().with_state(app_state.clone()))
         .nest("/add-website", routes::add_website::add_website_router().with_state(app_state))
         .nest("/performance-data", routes::website_performace::performance_router().with_state(db.clone()))
         .nest("/notifications", routes::notification::notification_router().with_state(db.clone()))
