@@ -90,7 +90,7 @@ impl SessionStore {
         None
     }
 
-    pub async fn modify_session(&mut self, validator_id : Uuid, session_id: &str) -> bool{
+    pub async fn modify_session(&self, validator_id : Uuid, session_id: &str) -> bool{
         let mut sessions = self.sessions.write().await;
 
         if let Some(session) = sessions.get_mut(session_id){
