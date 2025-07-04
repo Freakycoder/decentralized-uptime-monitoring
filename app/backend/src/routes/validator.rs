@@ -1,18 +1,20 @@
-use std::str::FromStr;
-
 use crate::entities::validator;
 use crate::middlewares::validator_auth::validator_jwt_middleware;
+use crate::types::cookie::CookieAppState;
 use crate::types::user::{
     ValidatorData, ValidatorInput, VerifySignatureRequest, VerifyValidatorResponse,
 };
+use crate::utils::cookie_extractor::get_authenticated_user_id;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{debug_handler, middleware, routing::post, Json, Router};
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 use solana_sdk::{pubkey::Pubkey, signature::Signature};
+use std::str::FromStr;
+use tower_cookies::Cookies;
 
-pub fn validator_router() -> Router<DatabaseConnection> {
+pub fn validator_router() -> Router<CookieAppState> {
     Router::new()
         .route("/wallet", post(handle_connection))
         .route(
@@ -23,10 +25,27 @@ pub fn validator_router() -> Router<DatabaseConnection> {
 
 #[debug_handler]
 async fn verify_validator(
-    State(db): State<DatabaseConnection>,
+    State(app_state): State<CookieAppState>,
+    cookies: Cookies,
     Json(validator_data): Json<ValidatorInput>,
 ) -> Json<VerifyValidatorResponse> {
-    let user_id = validator_data.user_id;
+
+    let session_id = match cookies.get("session_id"){
+        Some(id) => id,
+        None => return Json(VerifyValidatorResponse { status_code: 404, message: "failed to find session id".to_string(), validator_data: None })
+        };
+        
+
+    let user_id = match get_authenticated_user_id(&cookies, &app_state.session_store).await {
+        Ok(id) => id,
+        Err(status) => {
+            return Json(VerifyValidatorResponse {
+                status_code: 404,
+                message: "Failed to authenticate and get user id".to_string(),
+                validator_data: None,
+            });
+        }
+    };
     let device_id = validator_data.device_id;
     let proximity_range = 0.001;
 
@@ -36,7 +55,7 @@ async fn verify_validator(
         .filter(validator::Column::Latitude.lte(validator_data.latitude + proximity_range))
         .filter(validator::Column::Longitude.gte(validator_data.longitude - proximity_range))
         .filter(validator::Column::Longitude.gte(validator_data.longitude + proximity_range))
-        .one(&db)
+        .one(&app_state.db)
         .await;
 
     if let Err(db_err) = old_validator {
@@ -64,8 +83,19 @@ async fn verify_validator(
         ..Default::default()
     };
 
-    match new_validator.insert(&db).await {
+    match new_validator.insert(&app_state.db).await {
         Ok(validator) => {
+            let mut updated_session_store = app_state.session_store.clone();
+            let is_updated = updated_session_store
+                .modify_session(validator.id, &session_id.value())
+                .await;
+
+            if is_updated {
+                println!("Session updated for validator id : {}", validator.id);
+            } else {
+                println!("Falied to update session for validator : {}", validator.id);
+            }
+
             return Json(VerifyValidatorResponse {
                 status_code: 201,
                 message: format!("New validator registered : {}", validator.id),
