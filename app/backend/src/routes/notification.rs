@@ -18,10 +18,10 @@ use uuid::Uuid;
 pub fn notification_router() -> Router<DatabaseConnection> {
     Router::new()
         .route("/", post(create_notification))
-        .route("/validator/:validator_id", get(get_user_notifications))
-        .route("/:notification_id", patch(update_notification))
+        .route("/validator/{validator_id}", get(get_user_notifications))
+        .route("/{notification_id}", patch(update_notification))
         .route("/mark-all-read", put(mark_all_read))
-        .route("/unread-count/:validator_id", get(get_unread_count))
+        .route("/unread-count/{validator_id}", get(get_unread_count))
 }
 
 #[axum::debug_handler]

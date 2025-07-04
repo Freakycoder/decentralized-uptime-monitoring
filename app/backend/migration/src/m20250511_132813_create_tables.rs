@@ -1,3 +1,5 @@
+// Replace your first migration file (m20250511_132813_create_tables.rs) with this:
+
 use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
@@ -53,7 +55,7 @@ impl MigrationTrait for Migration {
                             .uuid()
                             .not_null()
                             .primary_key()
-                            .default(Expr::cust("gen_random_uuid()")), // ✅ Fixed: Use PostgreSQL's UUID generator
+                            .default(Expr::cust("gen_random_uuid()")),
                     )
                     .col(
                         ColumnDef::new(Validators::UserId)
@@ -86,7 +88,7 @@ impl MigrationTrait for Migration {
         println!("✅ Validators table created");
 
         println!("🔄 Creating WebsiteRegister table...");
-        // Create WebsiteRegister table
+        // Create WebsiteRegister table with ID (final version)
         manager
             .create_table(
                 Table::create()
@@ -97,7 +99,7 @@ impl MigrationTrait for Migration {
                             .uuid()
                             .not_null()
                             .primary_key()
-                            .default(Expr::cust("gen_random_uuid()")), // ✅ Fixed: Use PostgreSQL's UUID generator
+                            .default(Expr::cust("gen_random_uuid()")),
                     )
                     .col(
                         ColumnDef::new(WebsiteRegister::WebsiteUrl)
@@ -122,7 +124,7 @@ impl MigrationTrait for Migration {
         println!("✅ WebsiteRegister table created");
 
         println!("🔄 Creating WebsitePerformance table...");
-        // Create WebsitePerformance table
+        // Create WebsitePerformance table (simplified version from your latest migration)
         manager
             .create_table(
                 Table::create()
@@ -133,7 +135,7 @@ impl MigrationTrait for Migration {
                             .uuid()
                             .not_null()
                             .primary_key()
-                            .default(Expr::cust("gen_random_uuid()")), // ✅ Fixed: Use PostgreSQL's UUID generator
+                            .default(Expr::cust("gen_random_uuid()")),
                     )
                     .col(
                         ColumnDef::new(WebsitePerformance::ValidatorId)
@@ -151,8 +153,6 @@ impl MigrationTrait for Migration {
                             .not_null(),
                     )
                     .col(ColumnDef::new(WebsitePerformance::HttpStatusCode).integer())
-                    .col(ColumnDef::new(WebsitePerformance::ErrorType).string())
-                    .col(ColumnDef::new(WebsitePerformance::ConnectionType).string())
                     .col(ColumnDef::new(WebsitePerformance::DnsResolutionMs).integer())
                     .col(ColumnDef::new(WebsitePerformance::ConnectionTimeMs).integer())
                     .col(ColumnDef::new(WebsitePerformance::TlsHandshakeMs).integer())
@@ -163,25 +163,17 @@ impl MigrationTrait for Migration {
                             .integer()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(WebsitePerformance::ContentSizeBytes).integer())
-                    .col(ColumnDef::new(WebsitePerformance::ContainsExpectedContent).boolean())
-                    .col(ColumnDef::new(WebsitePerformance::Latitude).double())
-                    .col(ColumnDef::new(WebsitePerformance::Longitude).double())
-                    .col(
-                        ColumnDef::new(WebsitePerformance::IsValidated)
-                            .boolean()
-                            .not_null(),
-                    )
                     .to_owned(),
             )
             .await?;
         println!("✅ WebsitePerformance table created");
 
-        println!("🎉 All tables created successfully!");
+        println!("🎉 All base tables created successfully!");
         Ok(())
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        // Drop tables in reverse order of dependencies
         manager
             .drop_table(Table::drop().table(WebsitePerformance::Table).to_owned())
             .await?;
@@ -236,17 +228,10 @@ enum WebsitePerformance {
     WebsiteId,
     Timestamp,
     HttpStatusCode,
-    ErrorType,
-    ConnectionType,
     DnsResolutionMs,
     ConnectionTimeMs,
     TlsHandshakeMs,
     TimeToFirstByteMs,
     ContentDownloadMs,
     TotalTimeMs,
-    ContentSizeBytes,
-    ContainsExpectedContent,
-    Latitude,
-    Longitude,
-    IsValidated,
 }
