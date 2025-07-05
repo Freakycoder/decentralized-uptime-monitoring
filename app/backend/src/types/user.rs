@@ -14,11 +14,18 @@ pub struct SignUpResponse{
     pub user_id : Option<String>
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LoginResponse{
+    pub status_code : u32,
+    pub message : String,
+    pub user_data : Option<UserData>
+}
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Claims {
-   pub user_id: String,
-   pub exp: usize,
+
+pub struct UserData{
+    pub user_id  : Uuid,
+    pub validator_id : Option<Uuid>
 }
 
 #[derive(Debug, Serialize, Deserialize)]
