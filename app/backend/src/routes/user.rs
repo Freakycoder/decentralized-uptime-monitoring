@@ -1,4 +1,6 @@
+use crate::entities::validator;
 use crate::types::cookie::CookieAppState;
+use crate::types::user::{LoginResponse, UserData};
 use crate::{
     entities::user,
     types::user::{SignUpResponse, UserInput},
@@ -88,11 +90,11 @@ async fn signup(
 
 async fn signin(
     State(app_state): State<CookieAppState>,
-    cookies : Cookies,
+    cookies: Cookies,
     Json(user_data): Json<UserInput>,
-) -> Json<SignUpResponse> {
+) -> Json<LoginResponse> {
     let email = user_data.email;
-    let db = app_state.db;
+    let db = app_state.db.clone();
 
     let old_user = user::Entity::find()
         .filter(user::Column::Email.eq(&email))
@@ -100,10 +102,10 @@ async fn signin(
         .await;
 
     if let Err(db_err) = old_user {
-        return Json(SignUpResponse {
+        return Json(LoginResponse {
             status_code: 500,
             message: format!("Database error occured : {}", db_err),
-            user_id: None,
+            user_data: None,
         });
     }
 
@@ -121,17 +123,40 @@ async fn signin(
             .path("/")
             .build();
         cookies.add(session_cookie);
-        
-        return Json(SignUpResponse {
+
+        let validator_info = validator::Entity::find()
+            .filter(validator::Column::UserId.eq(existing_user.id))
+            .one(&app_state.db)
+            .await
+            .unwrap_or(None);
+
+        let validator_id = match validator_info {
+            Some(data) => data.id,
+            None => {
+                return Json(LoginResponse {
+                    status_code: 200,
+                    message: format!("User found"),
+                    user_data: Some(UserData {
+                        user_id: existing_user.id,
+                        validator_id: None,
+                    }),
+                })
+            }
+        };
+
+        return Json(LoginResponse {
             status_code: 200,
-            message: format!("User found"),
-            user_id: Some(existing_user.id.to_string()),
+            message: format!("User found with validator_id"),
+            user_data: Some(UserData {
+                user_id: existing_user.id,
+                validator_id: Some(validator_id),
+            }),
         });
     } else {
-        return Json(SignUpResponse {
+        return Json(LoginResponse {
             status_code: 404,
             message: format!("User not found"),
-            user_id: None,
+            user_data: None,
         });
     }
 }
