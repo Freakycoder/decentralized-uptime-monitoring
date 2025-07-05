@@ -1,14 +1,18 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
+import SessionManager from '@/services/SessionManager';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   isValidated: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
-  checkValidatorStatus: () => Promise<boolean>;
-  setValidated: (status: boolean) => void;
+}
+
+interface UserProfile {
+  userId: string,
+  validatorId: string
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,92 +23,103 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
+  const validateCurrentSession = async (): Promise<boolean> => {
+    const sessionStatus = await SessionManager.checkSessionStatus();
+
+    if (sessionStatus?.isValid && sessionStatus.userId) {
+      setIsAuthenticated(true); // autheticated means the user has a user_id, means registered and the cookie session is valid.
+      if (sessionStatus.validatorId) {
+        setIsValidated(true);
+      }
+
+      // const profile : UserProfile = {
+      //   userId : sessionStatus.userId,
+      //   validatorId : sessionStatus.validatorId
+      // }
+
+      // can create a state variable and name it as userProfile to store the info and access it anywhere in the app using useHook.
+      // for now we're not using it since we're storing the userProfile data in localstorage.
+
+      SessionManager.setLocalAuthState(sessionStatus);
+      console.log('Session validation succesfull');
+      return true
+    }
+    else {
+      console.log('Session validation failed');
+      setIsAuthenticated(false);
+      setIsValidated(false);
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('userId');
+      if (sessionStatus?.validatorId) {
+        localStorage.removeItem('validatorId');
+      }
+      return false
+    }
+  }
+
   // Check if user is authenticated on initial load
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('authToken');
-      const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-      
-      if (token && isLoggedIn) {
-        setIsAuthenticated(true);
-        // Check if user is a validator
-        const validatorStatus = localStorage.getItem('isValidator') === 'true';
-        setIsValidated(validatorStatus);
-      }
-      
-      setIsLoading(false);
-    };
+    const initializeAuth = async () => {
+      setIsLoading(true);
+      console.log('🚀 Initializing authentication state...');
 
-    checkAuth();
+      const isValidSession = await validateCurrentSession();
+
+      if (isValidSession) { // here we know user is having a valid session so redirect him to dashboard if he's on other routes.
+        if (router.pathname === '/login' || router.pathname === "/signup") {
+          const localData = SessionManager.getLocalUserData();
+          if (localData.validatorId) {
+            console.log('Authenticated validator - redirecting to vlaidator dashboard...');
+            router.push('/home?view=validator')
+          } else {
+            console.log('Authenticated user - showing validator registration option');
+            router.push('/home?view=user');
+          }
+        }
+      } else { // we enter else when user has no valid session.
+        if (router.pathname !== '/login' && router.pathname !== "/signup") { // if a user is present on any route other than login or signup than bring him to login. since he's having invalid session
+          router.push('/login');
+        }
+      }
+      setIsLoading(false);
+    }
+    initializeAuth()
   }, []);
 
-  // Protect routes - redirect to login if not authenticated
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated && router.pathname !== '/' && router.pathname !== '/signup') {
-      router.push('/');
-    }
-  }, [isAuthenticated, isLoading, router]);
 
   const login = async (email: string, password: string) => {
     try {
       const response = await axios.post('http://127.0.0.1:3001/user/signin', {
-        username: '',
         email,
         password
-      });
+      }, { withCredentials: true });
 
-      if (response.data.status_code === 200 && response.data.token) {
-        localStorage.setItem('authToken', response.data.token);
+      if (response.data.status_code === 200 && response.data.user_data) {
+        localStorage.setItem('userId', response.data.user_data.user_id);
         localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userEmail', email);
+        if (response.data.user_data.validatorId){
+          localStorage.setItem('validator_id', response.data.user_data.user_id);
+          setIsValidated(true)
+        }
         setIsAuthenticated(true);
-        
-        // Check validator status after login
-        await checkValidatorStatus();
-        
+
         return { success: true, message: 'Login successful' };
       } else {
         return { success: false, message: response.data.message || 'Login failed' };
       }
-    } catch (error) {
+    } catch (error) { // ask gpt about wallet connection after login.
       console.error('Login error:', error);
       return { success: false, message: 'Authentication failed' };
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('authToken');
     localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('isValidator');
-    localStorage.removeItem('userEmail');
+    localStorage.removeItem('validatorId');
+    localStorage.removeItem('userId');
     setIsAuthenticated(false);
     setIsValidated(false);
-    // UPDATED: Now redirects to root (/) instead of /login
-    router.push('/');
-  };
-
-  const checkValidatorStatus = async () => {
-    // This would be a real API call in production
-    // For now, we'll just check localStorage
-    try {
-      // In a real app, you would call your backend API to check
-      // const response = await axios.get('http://127.0.0.1:3001/validator/status', {
-      //   headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
-      // });
-      // const isValidator = response.data.isValidator;
-      
-      const isValidator = localStorage.getItem('isValidator') === 'true';
-      setIsValidated(isValidator);
-      return isValidator;
-    } catch (error) {
-      console.error('Failed to check validator status:', error);
-      return false;
-    }
-  };
-
-  const setValidated = (status: boolean) => {
-    localStorage.setItem('isValidator', status.toString());
-    setIsValidated(status);
+    router.push('/login');
   };
 
   // Don't render children until we've checked authentication
@@ -113,13 +128,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ 
-      isAuthenticated, 
+    <AuthContext.Provider value={{
+      isAuthenticated,
       isValidated,
-      login, 
+      login,
       logout,
-      checkValidatorStatus,
-      setValidated 
     }}>
       {children}
     </AuthContext.Provider>
