@@ -13,7 +13,7 @@ class SessionManager {
         try {
 
             console.log('checking session status with server...');
-            const response = await axios.get('http://localhsot:3001/user/session-status', {
+            const response = await axios.get('http://localhost:3001/user/session-status', {
                 withCredentials: true
             })
 
@@ -23,17 +23,17 @@ class SessionManager {
                 console.log('🎫 Validator ID:', response.data.validator_id || null);
 
                 return {
-                    isValid: true,
+                    isValid: response.data.is_valid,
                     userId: response.data.user_id,
                     validatorId: response.data.validator_id
                 }
             }
             else {
-                console.log('❌ Session check failed:', response.data.message);
+                console.log('✅  Session check success, did not get any valid session');
                 return {
-                    isValid: false,
-                    userId: null,
-                    validatorId: null
+                    isValid: response.data.is_valid,
+                    userId: response.data.user_id,
+                    validatorId: response.data.validator_id
                 }
             }
         }
