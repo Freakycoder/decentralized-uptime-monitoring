@@ -1,13 +1,14 @@
 use crate::entities::validator;
 use crate::types::cookie::CookieAppState;
-use crate::types::user::{LoginResponse, UserData};
+use crate::types::user::{LoginResponse, SessionStatusResponse, UserData};
+use crate::utils::cookie_extractor::get_authenticated_user_id;
 use crate::{
     entities::user,
     types::user::{SignUpResponse, UserInput},
 };
 use axum::{
     extract::{Json, State},
-    routing::post,
+    routing::{get, post},
     Router,
 };
 use cookie::Cookie;
@@ -18,6 +19,7 @@ pub fn user_router() -> Router<CookieAppState> {
     Router::new()
         .route("/signup", post(signup))
         .route("/signin", post(signin))
+        .route("/session-status", get(check_session_status))
 }
 #[axum::debug_handler]
 async fn signup(
@@ -158,6 +160,50 @@ async fn signin(
             message: format!("User not found"),
             user_data: None,
         });
+    }
+}
+
+#[axum::debug_handler]
+async fn check_session_status(
+    State(app_state): State<CookieAppState>,
+    cookies: Cookies,
+) -> Json<SessionStatusResponse> {
+    match get_authenticated_user_id(&cookies, &app_state.session_store).await {
+        Ok(user_id) => {
+            let user_result = user::Entity::find_by_id(user_id).one(&app_state.db).await;
+
+            match user_result {
+                Ok(Some(user)) => {
+                    let validator_info = validator::Entity::find()
+                        .filter(validator::Column::UserId.eq(user_id))
+                        .one(&app_state.db)
+                        .await
+                        .unwrap_or(None);
+
+                    Json(SessionStatusResponse {
+                        status_code: 200,
+                        is_valid: true,
+                        user_id: Some(user.id.to_string()),
+                        validator_id: validator_info.map(|v| v.id.to_string()),
+                    })
+                }
+                _ => Json(SessionStatusResponse {
+                    status_code: 401,
+                    is_valid: false,
+                    user_id: None,
+                    validator_id: None,
+                }),
+            }
+        }
+        Err(_) => {
+            // Session cookie is missing, expired, or invalid
+            Json(SessionStatusResponse {
+                status_code: 401,
+                is_valid: false,
+                user_id: None,
+                validator_id: None,
+            })
+        }
     }
 }
 
