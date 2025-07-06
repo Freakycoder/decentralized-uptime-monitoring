@@ -45,7 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return true
     }
     else {
-      console.log('Session validation failed');
+      console.log('Session validation successfull, session is not valid');
       setIsAuthenticated(false);
       setIsValidated(false);
       localStorage.removeItem('isLoggedIn');
