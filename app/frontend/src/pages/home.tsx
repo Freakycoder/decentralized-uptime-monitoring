@@ -1,4 +1,3 @@
-// app/frontend/src/pages/home.tsx
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -74,7 +73,8 @@ const Home = () => {
         setSuccess('Website successfully added for monitoring!');
         addNotification(
           'Website Added Successfully', 
-          `${websiteUrl} has been added to your monitoring list.`
+          `${websiteUrl} has been added to your monitoring list.`,
+          "monitoring"
         );
         setWebsiteUrl('');
       } else if (response.data.status_code === 409) {
