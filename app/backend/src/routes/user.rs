@@ -112,8 +112,8 @@ async fn signin(
     }
 
     if let Some(existing_user) = old_user.unwrap() {
-        let session_id = if let Some(session_cookie) = cookies.get("session_id") {
-            let existing_session_id = session_cookie.value();
+        let session_id = if let Some(session_id) = cookies.get("session_id") {
+            let existing_session_id = session_id.value();
             if let Some(session_data) = app_state
                 .session_store
                 .get_session(existing_session_id)
