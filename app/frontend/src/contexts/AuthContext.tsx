@@ -83,8 +83,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       setIsLoading(false);
     }
-    initializeAuth()
-  }, []);
+    if (router.isReady) {
+      initializeAuth()
+    }
+  }, [router.isReady, router.pathname]);
 
 
   const login = async (email: string, password: string) => {
@@ -95,11 +97,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }, { withCredentials: true });
 
       if (response.data.status_code === 200 && response.data.user_data) {
+
+        console.log('✅ Login successful');
+
         localStorage.setItem('userId', response.data.user_data.user_id);
         localStorage.setItem('isLoggedIn', 'true');
-        if (response.data.user_data.validatorId){
+
+        if (response.data.user_data.validatorId) {
           localStorage.setItem('validator_id', response.data.user_data.user_id);
           setIsValidated(true)
+          console.log('🎫 User is a validator');
+        } else {
+          localStorage.removeItem('validatorId');
+          setIsValidated(false);
+          console.log('👤 User is not a validator');
         }
         setIsAuthenticated(true);
 
@@ -107,8 +118,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         return { success: false, message: response.data.message || 'Login failed' };
       }
-    } catch (error) { // ask gpt about wallet connection after login.
-      console.error('Login error:', error);
+    } catch (error) {
+      console.error('❌ Login error:', error); 
       return { success: false, message: 'Authentication failed' };
     }
   };
