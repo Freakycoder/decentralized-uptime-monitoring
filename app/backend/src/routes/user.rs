@@ -112,10 +112,29 @@ async fn signin(
     }
 
     if let Some(existing_user) = old_user.unwrap() {
-        let session_id = app_state
-            .session_store
-            .create_session(existing_user.id)
-            .await;
+        let session_id = if let Some(session_cookie) = cookies.get("session_id") {
+            let existing_session_id = session_cookie.value();
+            if let Some(session_data) = app_state
+                .session_store
+                .get_session(existing_session_id)
+                .await
+            {
+                if session_data.user_id == existing_user.id {
+                    println!("✅ Reusing existing valid session: {}", existing_session_id);
+                    existing_session_id.to_string()
+                } else {
+                    println!("🔄 Session belongs to different user, creating new session");
+                    app_state.session_store.create_session(existing_user.id).await
+                }
+            }
+            else {
+                println!("Session expired or invalid, creating new session...");
+                app_state.session_store.create_session(existing_user.id).await
+            }
+        } else {
+            println!("No exisiting session cookie found, creating new cookie");
+            app_state.session_store.create_session(existing_user.id).await
+        };
 
         let session_cookie = Cookie::build(("session_id", session_id))
             .http_only(true)
