@@ -1,6 +1,5 @@
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { Notification } from '../types';
-import { notifications as initialNotifications } from '../lib/mockData';
 import axios from 'axios';
 
 // For simplicity in this demo, we'll create a simple UUID function instead of using a package
@@ -30,11 +29,10 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
     const unreadCount = notifications.filter(n => !n.read).length;
 
     const validatorId = localStorage.getItem('validatorId');
-    const token = localStorage.getItem('authToken');
 
     const loadNotifications = async () => {
-        if (!validatorId || !token) {
-            console.log('❌ No validator ID or token available');
+        if (!validatorId) {
+            console.log('❌ failed to fetch notifications since no validator ID found');
             setLoading(false);
             return;
         }
@@ -42,10 +40,7 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
             setLoading(true);
             setError(null);
             const response = await axios.get(`http://localhost:3001/notifications/validator/${validatorId}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
+               withCredentials : true
             });
 
             if (response.data.status_code === 200) {
@@ -75,7 +70,7 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
 
     useEffect(() => {
         loadNotifications()
-    }, [validatorId, token]);
+    }, [validatorId]);
 
     // Add a new notification
     const addNotification = async (title: string, message: string, type: string, data?: any) => {
@@ -111,10 +106,7 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
                 read: true,
                 action_taken: action
             }, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
+                withCredentials : true
             })
 
             if (response.data.status_code === 200) {
@@ -159,7 +151,7 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
 
     // Mark a notification as read
     const markAsRead = async (id: string) => {
-        if (!token) {
+        if (!validatorId) {
             console.error('❌ No token available');
             return;
         }
@@ -167,10 +159,7 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
             const response = await axios.patch(`http://localhost:3001/notifications/${id}`, {
                 read: true
             }, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
+                withCredentials : true
             });
 
             if (response.data.status_code === 200) {
@@ -191,7 +180,7 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
 
     // Mark all notifications as read
     const markAllAsRead = async() => {
-        if (!validatorId || !token) {
+        if (!validatorId) {
             console.error('❌ No validator ID or token available');
             return;
         }
@@ -200,10 +189,7 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
             const response = await axios.put('http://localhost:3001/notifications/mark-all-read', {
                 validator_id: validatorId
             }, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
+               withCredentials : true
             });
 
             if (response.data.status_code === 200) {
