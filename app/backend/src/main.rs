@@ -7,7 +7,7 @@ use migration::{Migrator, MigratorTrait};
 use sea_orm::Database;
 use std::{env, sync::Arc};
 use tower_cookies::CookieManagerLayer; // Add this import for cookie handling
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::CorsLayer;
 use websocket::manager::WebSocketManager;
 
 pub mod cookie;
