@@ -10,10 +10,10 @@ interface AuthContextType {
   logout: () => void;
 }
 
-interface UserProfile {
-  userId: string,
-  validatorId: string
-}
+// interface UserProfile {
+//   userId: string,
+//   validatorId: string
+// }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
