@@ -86,7 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (router.isReady) {
       initializeAuth()
     }
-  }, [router.isReady, router.pathname]);
+  }, [router.isReady]);
 
 
   const login = async (email: string, password: string) => {
@@ -104,7 +104,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem('isLoggedIn', 'true');
 
         if (response.data.user_data.validatorId) {
-          localStorage.setItem('validator_id', response.data.user_data.user_id);
+          localStorage.setItem('validatorId', response.data.user_data.user_id);
           setIsValidated(true)
           console.log('🎫 User is a validator');
         } else {
