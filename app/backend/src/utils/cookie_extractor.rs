@@ -1,7 +1,8 @@
 use axum::http::StatusCode;
 use tower_cookies::Cookies;
 use uuid::Uuid;
-use crate::cookie::manager::{SessionStore, SessionData};
+use crate::cookie::manager::SessionStore;
+use crate::types::cookie::SessionData;
 
 pub async fn authenticate_session(
     cookies: &Cookies,
