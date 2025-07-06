@@ -2,19 +2,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use chrono::{DateTime, Utc, Duration};
-use serde::{Deserialize, Serialize};
-
-// Define what we store in each session
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SessionData {
-    pub user_id: Uuid,
-    pub validator_id : Option<Uuid>,
-    pub is_validator : bool,
-    pub created_at: DateTime<Utc>,
-    pub last_accessed: DateTime<Utc>,
-    pub expires_at: DateTime<Utc>,
-}
+use chrono::{Utc, Duration};
+use crate::types::cookie::SessionData;
 
 impl SessionData {
     pub fn new(user_id: Uuid) -> Self {
@@ -22,10 +11,9 @@ impl SessionData {
         Self {
             user_id,
             validator_id : None,
-            is_validator : false,
             created_at: now,
             last_accessed: now,
-            expires_at: now + Duration::hours(24), // Session expires in 24 hours
+            expires_at: now + Duration::hours(2), // Session expires in 2 hours
         }
     }
     // passing the self object or struct i would say.
@@ -36,7 +24,7 @@ impl SessionData {
     pub fn refresh(&mut self) {
         self.last_accessed = Utc::now();
         // Extend expiration by 24 hours from now
-        self.expires_at = Utc::now() + Duration::hours(24);
+        self.expires_at = Utc::now() + Duration::hours(2);
     }
 
     pub fn add_validator(&mut self , validator_id : Uuid){
