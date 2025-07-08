@@ -1,4 +1,3 @@
-use sea_orm::prelude::DateTimeWithTimeZone;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -7,8 +6,10 @@ pub struct CreateNotificationRequest {
     pub validator_id: Uuid,
     pub title: String,
     pub message: String,
+    pub website_url: Option<String>,
+    pub website_id : Option<String>,
+    pub action_taken : Option<String>,
     pub notification_type: String,
-    pub data: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -17,10 +18,12 @@ pub struct NotificationResponse {
     pub validator_id: Uuid,
     pub title: String,
     pub message: String,
-    pub notification_type: String,
+    pub created_at: String,
+    pub website_url : String,
+    pub website_id : String,
     pub read: bool,
     pub action_taken: Option<String>,
-    pub created_at: DateTimeWithTimeZone,
+    pub notification_type: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -76,10 +79,12 @@ impl From<crate::entities::notification::Model> for NotificationResponse {
             validator_id: model.validator_id,
             title: model.title,
             message: model.message,
-            notification_type: model.notification_type,
+            created_at: model.created_at,
+            website_url : model.website_url,
+            website_id : model.website_id,
             read: model.read,
             action_taken: model.action_taken,
-            created_at: model.created_at,
+            notification_type: model.notification_type,
         }
     }
 }
