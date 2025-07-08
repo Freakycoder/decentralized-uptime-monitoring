@@ -4,7 +4,6 @@ use crate::types::notification::{
     MarkAllReadRequest, MarkAllReadResponse, NotificationQuery, NotificationResponse,
     UpdateNotificationRequest, UpdateNotificationResponse
 };
-use axum::http::request;
 use axum::{
     extract::{Path, Query, State},
     routing::{get, post, put, patch},
