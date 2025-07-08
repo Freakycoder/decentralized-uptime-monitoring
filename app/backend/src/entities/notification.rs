@@ -8,10 +8,12 @@ pub struct Model {
     pub validator_id: Uuid,
     pub title: String,
     pub message: String,
-    pub notification_type: String,
+    pub created_at: String,
+    pub website_url : String,
+    pub website_id : String,
     pub read: bool,
     pub action_taken: Option<String>,
-    pub created_at: DateTimeWithTimeZone
+    pub notification_type: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
