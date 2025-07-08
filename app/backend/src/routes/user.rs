@@ -11,6 +11,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
+use axum_extra::extract::cookie::CookieJar;
 use cookie::Cookie;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 use tower_cookies::Cookies; // Cookies is an extractor like JSON or State.
@@ -24,7 +25,7 @@ pub fn user_router() -> Router<CookieAppState> {
 #[axum::debug_handler]
 async fn signup(
     State(app_state): State<CookieAppState>,
-    cookies: Cookies,
+    cookies: CookieJar,
     Json(user_data): Json<UserInput>,
 ) -> Json<SignUpResponse> {
     let email = user_data.email;
@@ -102,7 +103,7 @@ async fn signup(
 
 async fn signin(
     State(app_state): State<CookieAppState>,
-    cookies: Cookies,
+    cookies: CookieJar,
     Json(user_data): Json<UserInput>,
 ) -> Json<LoginResponse> {
     let email = user_data.email;
@@ -236,7 +237,7 @@ async fn signin(
 #[axum::debug_handler]
 async fn check_session_status(
     State(app_state): State<CookieAppState>,
-    cookies: Cookies,
+    cookies: CookieJar,
 ) -> Json<SessionStatusResponse> {
     match get_authenticated_user_id(&cookies, &app_state.session_store).await {
         Ok(user_id) => {
