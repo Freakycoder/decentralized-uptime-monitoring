@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use crate::entities::validator;
 use crate::types::cookie::CookieAppState;
 use crate::types::user::{LoginResponse, SessionStatusResponse, UserData};
@@ -63,13 +65,23 @@ async fn signup(
     match new_user.insert(&app_state.db).await {
         // in 'new_user.insert(&db).await' we actually insert the record into db
         Ok(user) => {
-            let session_id = app_state.session_store.create_session(user.id).await;
+            let session_id = match app_state.session_store.create_session(user.id).await {
+                Ok(id) => id,
+                Err(_) => {
+                    println!("failed to create session for user");
+                    return Json(SignUpResponse {
+                        message: format!("failed creating a session for the user"),
+                        status_code: 404,
+                        user_id: None,
+                    });
+                }
+            };
 
             let session_cookie = Cookie::build(("session_id", session_id))
                 .http_only(true)
-                .secure(true) // Use HTTPS in production
-                .same_site(cookie::SameSite::Strict)
-                .max_age(cookie::time::Duration::hours(24)) // Match session expiration
+                .secure(false) // Use HTTPS in production
+                .same_site(cookie::SameSite::Lax)
+                .max_age(cookie::time::Duration::seconds(7200)) // Match session expiration
                 .path("/")
                 .build();
 
@@ -124,28 +136,69 @@ async fn signin(
                     existing_session_id.to_string()
                 } else {
                     println!("🔄 Session belongs to different user, creating new session");
-                    app_state.session_store.create_session(existing_user.id).await
+                    match app_state
+                        .session_store
+                        .create_session(existing_user.id)
+                        .await
+                    {
+                        Ok(id) => id,
+                        Err(e) => {
+                            println!("Error creating session for logged in user: {}", e);
+                            return Json(LoginResponse {
+                                status_code: 404,
+                                message: format!("error creating sesion"),
+                                user_data: None,
+                            });
+                        }
+                    }
                 }
-            }
-            else {
+            } else {
                 println!("Session expired or invalid, creating new session...");
-                app_state.session_store.create_session(existing_user.id).await
+                match app_state
+                    .session_store
+                    .create_session(existing_user.id)
+                    .await
+                {
+                    Ok(id) => id,
+                    Err(e) => {
+                        println!("Error creating session for logged in user: {}", e);
+                        return Json(LoginResponse {
+                            status_code: 404,
+                            message: format!("error creating sesion"),
+                            user_data: None,
+                        });
+                    }
+                }
             }
         } else {
             println!("No exisiting session cookie found, creating new cookie");
-            app_state.session_store.create_session(existing_user.id).await
+            match app_state
+                .session_store
+                .create_session(existing_user.id)
+                .await
+            {
+                Ok(id) => id,
+                Err(e) => {
+                    println!("Error creating session for logged in user: {}", e);
+                    return Json(LoginResponse {
+                        status_code: 404,
+                        message: format!("error creating sesion"),
+                        user_data: None,
+                    });
+                }
+            }
         };
 
         let session_cookie = Cookie::build(("session_id", session_id))
             .http_only(true)
-            .secure(true)
-            .same_site(cookie::SameSite::Strict)
-            .max_age(cookie::time::Duration::hours(2))
+            .secure(false)
+            .same_site(cookie::SameSite::Lax)
+            .max_age(cookie::time::Duration::seconds(7200))
             .path("/")
             .build();
         cookies.add(session_cookie);
 
-        let validator_info = validator::Entity::find()
+        let validator_info: Option<validator::Model> = validator::Entity::find()
             .filter(validator::Column::UserId.eq(existing_user.id))
             .one(&app_state.db)
             .await
@@ -189,6 +242,7 @@ async fn check_session_status(
 ) -> Json<SessionStatusResponse> {
     match get_authenticated_user_id(&cookies, &app_state.session_store).await {
         Ok(user_id) => {
+            println!("✅ Found valid session for user: {} from server", user_id);
             let user_result = user::Entity::find_by_id(user_id).one(&app_state.db).await;
 
             match user_result {
@@ -215,7 +269,7 @@ async fn check_session_status(
             }
         }
         Err(_) => {
-            // Session cookie is missing, expired, or invalid
+            println!("❌ No valid session found from server");
             Json(SessionStatusResponse {
                 status_code: 401,
                 is_valid: false,
