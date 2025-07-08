@@ -4,6 +4,7 @@ use crate::types::notification::{
     MarkAllReadRequest, MarkAllReadResponse, NotificationQuery, NotificationResponse,
     UpdateNotificationRequest, UpdateNotificationResponse
 };
+use axum::http::request;
 use axum::{
     extract::{Path, Query, State},
     routing::{get, post, put, patch},
@@ -17,7 +18,7 @@ use uuid::Uuid;
 
 pub fn notification_router() -> Router<DatabaseConnection> {
     Router::new()
-        .route("/", post(create_notification))
+        .route("/create-notification", post(create_notification))
         .route("/validator/{validator_id}", get(get_user_notifications))
         .route("/{notification_id}", patch(update_notification))
         .route("/mark-all-read", put(mark_all_read))
@@ -33,9 +34,10 @@ async fn create_notification(
         validator_id: Set(request.validator_id),
         title: Set(request.title),
         message: Set(request.message),
+        website_url : Set(request.website_url.unwrap_or_default()), // if Some then that value is returned if None then default of type (String) is returned.
+        website_id : Set(request.website_id.unwrap_or_default()),
+        action_taken: Set(request.action_taken),
         notification_type: Set(request.notification_type),
-        read: Set(false),
-        action_taken: Set(None),
         ..Default::default()
     };
 
