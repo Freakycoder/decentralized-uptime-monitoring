@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use crate::entities::validator;
 use crate::types::cookie::CookieAppState;
 use crate::types::user::{LoginResponse, SessionStatusResponse, UserData};
