@@ -1,11 +1,11 @@
 use axum::http::StatusCode;
-use tower_cookies::Cookies;
+use axum_extra::extract::cookie::CookieJar;
 use uuid::Uuid;
 use crate::cookie::manager::SessionStore;
 use crate::types::cookie::SessionData;
 
 pub async fn authenticate_session(
-    cookies: &Cookies,
+    cookies: &CookieJar,
     session_store: &SessionStore,
 ) -> Result<SessionData, StatusCode> {
     println!("🔍 Starting session authentication...");
@@ -38,7 +38,7 @@ pub async fn authenticate_session(
 }
 
 pub async fn get_authenticated_user_id(
-    cookies: &Cookies,
+    cookies: &CookieJar,
     session_store: &SessionStore,
 ) -> Result<Uuid, StatusCode> {
     println!("🔍 Getting authenticated user ID...");
@@ -48,7 +48,7 @@ pub async fn get_authenticated_user_id(
 }
 
 pub async fn get_authenticated_validator(
-    cookies: &Cookies,
+    cookies: &CookieJar,
     session_store: &SessionStore,
 ) -> Result<(Uuid, Uuid), StatusCode> {
     println!("🔍 Getting authenticated validator...");
