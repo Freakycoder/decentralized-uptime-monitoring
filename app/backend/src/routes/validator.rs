@@ -11,7 +11,7 @@ use axum::{debug_handler,routing::post, Json, Router};
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 use solana_sdk::{pubkey::Pubkey, signature::Signature};
 use std::str::FromStr;
-use tower_cookies::Cookies;
+use axum_extra::extract::cookie::CookieJar;
 
 pub fn validator_router() -> Router<CookieAppState> {
     Router::new()
@@ -24,7 +24,7 @@ pub fn validator_router() -> Router<CookieAppState> {
 #[debug_handler]
 async fn verify_validator(
     State(app_state): State<CookieAppState>,
-    cookies: Cookies,
+    cookies: CookieJar,
     Json(validator_data): Json<ValidatorInput>,
 ) -> Json<VerifyValidatorResponse> {
 
