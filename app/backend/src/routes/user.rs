@@ -8,13 +8,12 @@ use crate::{
 };
 use axum::{
     extract::{Json, State},
+    response::{IntoResponse},
     routing::{get, post},
     Router,
 };
-use axum_extra::extract::cookie::CookieJar;
-use cookie::Cookie;
+use axum_extra::extract::cookie::{Cookie, CookieJar}; // ✅ Use CookieJar from axum_extra
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
-use tower_cookies::Cookies; // Cookies is an extractor like JSON or State.
 
 pub fn user_router() -> Router<CookieAppState> {
     Router::new()
@@ -22,14 +21,17 @@ pub fn user_router() -> Router<CookieAppState> {
         .route("/signin", post(signin))
         .route("/session-status", get(check_session_status))
 }
+
 #[axum::debug_handler]
 async fn signup(
     State(app_state): State<CookieAppState>,
-    cookies: CookieJar,
+    jar: CookieJar, // ✅ Use CookieJar
     Json(user_data): Json<UserInput>,
-) -> Json<SignUpResponse> {
+) -> impl IntoResponse {
     let email = user_data.email;
     let password = user_data.password;
+
+    println!("🔄 Signup attempt for email: {}", email);
 
     let old_user = user::Entity::find()
         .filter(user::Column::Email.eq(&email))
@@ -37,77 +39,99 @@ async fn signup(
         .await;
 
     if let Err(db_err) = old_user {
-        println!("Some issue occured with finding old user.");
-        return Json(SignUpResponse {
-            status_code: 500,
-            message: format!("Database error occured : {}", db_err),
-            user_id: None,
-        });
+        println!("Some issue occurred with finding old user.");
+        return (
+            jar,
+            Json(SignUpResponse {
+                status_code: 500,
+                message: format!("Database error occurred : {}", db_err),
+                user_id: None,
+            }),
+        );
     }
 
     if let Some(_) = old_user.unwrap() {
         println!("user already exist");
-        return Json(SignUpResponse {
-            status_code: 409, //conflict status code
-            message: format!("User already exist, please SignIn"),
-            user_id: None,
-        });
+        return (
+            jar,
+            Json(SignUpResponse {
+                status_code: 409,
+                message: format!("User already exist, please SignIn"),
+                user_id: None,
+            }),
+        );
     }
 
     let new_user = user::ActiveModel {
         email: Set(email),
         password_hash: Set(create_hash(password)),
         ..Default::default()
-    }; // this part is just creating a record to insert into db
+    };
     println!("creating new user record.");
 
     match new_user.insert(&app_state.db).await {
-        // in 'new_user.insert(&db).await' we actually insert the record into db
         Ok(user) => {
             let session_id = match app_state.session_store.create_session(user.id).await {
                 Ok(id) => id,
-                Err(_) => {
-                    println!("failed to create session for user");
-                    return Json(SignUpResponse {
-                        message: format!("failed creating a session for the user"),
-                        status_code: 404,
-                        user_id: None,
-                    });
+                Err(e) => {
+                    println!("❌ Failed to create session for user: {}", e);
+                    return (
+                        jar,
+                        Json(SignUpResponse {
+                            message: format!("failed creating a session for the user"),
+                            status_code: 500,
+                            user_id: None,
+                        }),
+                    );
                 }
             };
 
+            println!("🍪 Setting signup session cookie: {}", session_id);
+
             let session_cookie = Cookie::build(("session_id", session_id))
                 .http_only(true)
-                .secure(false) // Use HTTPS in production
-                .same_site(cookie::SameSite::Lax)
-                .max_age(cookie::time::Duration::seconds(7200)) // Match session expiration
+                .secure(false)
+                .same_site(cookie::SameSite::None)
+                .max_age(cookie::time::Duration::seconds(7200))
                 .path("/")
                 .build();
 
-            cookies.add(session_cookie);
+            println!("🍪 Cookie details: {:?}", session_cookie);
 
-            Json(SignUpResponse {
-                message: user.id.to_string(),
-                status_code: 200,
-                user_id: Some(user.id.to_string()),
-            })
+            let updated_jar = jar.add(session_cookie);
+            println!("✅ Cookie added to jar");
+
+            (
+                updated_jar,
+                Json(SignUpResponse {
+                    message: user.id.to_string(),
+                    status_code: 200,
+                    user_id: Some(user.id.to_string()),
+                }),
+            )
         }
 
-        Err(err) => Json(SignUpResponse {
-            status_code: 404,
-            message: format!("Failed to create new user : {}", err),
-            user_id: None,
-        }),
+        Err(err) => (
+            jar,
+            Json(SignUpResponse {
+                status_code: 500,
+                message: format!("Failed to create new user : {}", err),
+                user_id: None,
+            }),
+        ),
     }
 }
 
+#[axum::debug_handler]
 async fn signin(
     State(app_state): State<CookieAppState>,
-    cookies: CookieJar,
+    jar: CookieJar, // ✅ Use CookieJar
     Json(user_data): Json<UserInput>,
-) -> Json<LoginResponse> {
+) -> impl IntoResponse {
     let email = user_data.email;
     let db = app_state.db.clone();
+
+    println!("🔄 Signin attempt for email: {}", email);
 
     let old_user = user::Entity::find()
         .filter(user::Column::Email.eq(&email))
@@ -115,16 +139,23 @@ async fn signin(
         .await;
 
     if let Err(db_err) = old_user {
-        return Json(LoginResponse {
-            status_code: 500,
-            message: format!("Database error occured : {}", db_err),
-            user_data: None,
-        });
+        return (
+            jar,
+            Json(LoginResponse {
+                status_code: 500,
+                message: format!("Database error occurred : {}", db_err),
+                user_data: None,
+            }),
+        );
     }
 
     if let Some(existing_user) = old_user.unwrap() {
-        let session_id = if let Some(session_id) = cookies.get("session_id") {
-            let existing_session_id = session_id.value();
+        println!("✅ User found: {}", existing_user.id);
+
+        let session_id = if let Some(session_cookie) = jar.get("session_id") {
+            let existing_session_id = session_cookie.value();
+            println!("🔍 Found existing session cookie: {}", existing_session_id);
+            
             if let Some(session_data) = app_state
                 .session_store
                 .get_session(existing_session_id)
@@ -142,17 +173,20 @@ async fn signin(
                     {
                         Ok(id) => id,
                         Err(e) => {
-                            println!("Error creating session for logged in user: {}", e);
-                            return Json(LoginResponse {
-                                status_code: 404,
-                                message: format!("error creating sesion"),
-                                user_data: None,
-                            });
+                            println!("❌ Error creating session for logged in user: {}", e);
+                            return (
+                                jar,
+                                Json(LoginResponse {
+                                    status_code: 500,
+                                    message: format!("error creating session"),
+                                    user_data: None,
+                                }),
+                            );
                         }
                     }
                 }
             } else {
-                println!("Session expired or invalid, creating new session...");
+                println!("🔄 Session expired or invalid, creating new session...");
                 match app_state
                     .session_store
                     .create_session(existing_user.id)
@@ -160,17 +194,20 @@ async fn signin(
                 {
                     Ok(id) => id,
                     Err(e) => {
-                        println!("Error creating session for logged in user: {}", e);
-                        return Json(LoginResponse {
-                            status_code: 404,
-                            message: format!("error creating sesion"),
-                            user_data: None,
-                        });
+                        println!("❌ Error creating session for logged in user: {}", e);
+                        return (
+                            jar,
+                            Json(LoginResponse {
+                                status_code: 500,
+                                message: format!("error creating session"),
+                                user_data: None,
+                            }),
+                        );
                     }
                 }
             }
         } else {
-            println!("No exisiting session cookie found, creating new cookie");
+            println!("🔄 No existing session cookie found, creating new session");
             match app_state
                 .session_store
                 .create_session(existing_user.id)
@@ -178,24 +215,33 @@ async fn signin(
             {
                 Ok(id) => id,
                 Err(e) => {
-                    println!("Error creating session for logged in user: {}", e);
-                    return Json(LoginResponse {
-                        status_code: 404,
-                        message: format!("error creating sesion"),
-                        user_data: None,
-                    });
+                    println!("❌ Error creating session for logged in user: {}", e);
+                    return (
+                        jar,
+                        Json(LoginResponse {
+                            status_code: 500,
+                            message: format!("error creating session"),
+                            user_data: None,
+                        }),
+                    );
                 }
             }
         };
 
+        println!("🍪 Setting login session cookie: {}", session_id);
+
         let session_cookie = Cookie::build(("session_id", session_id))
             .http_only(true)
             .secure(false)
-            .same_site(cookie::SameSite::Lax)
+            .same_site(cookie::SameSite::None)
             .max_age(cookie::time::Duration::seconds(7200))
             .path("/")
             .build();
-        cookies.add(session_cookie);
+
+        println!("🍪 Cookie details: {:?}", session_cookie);
+
+        let updated_jar = jar.add(session_cookie);
+        println!("✅ Cookie added to jar");
 
         let validator_info: Option<validator::Model> = validator::Entity::find()
             .filter(validator::Column::UserId.eq(existing_user.id))
@@ -204,71 +250,107 @@ async fn signin(
             .unwrap_or(None);
 
         let validator_id = match validator_info {
-            Some(data) => data.id,
+            Some(data) => {
+                println!("✅ User has validator: {}", data.id);
+                Some(data.id)
+            },
             None => {
-                return Json(LoginResponse {
-                    status_code: 200,
-                    message: format!("User found"),
-                    user_data: Some(UserData {
-                        user_id: existing_user.id,
-                        validator_id: None,
-                    }),
-                })
+                println!("ℹ️ User is not a validator");
+                None
             }
         };
 
-        return Json(LoginResponse {
+        let response = Json(LoginResponse {
             status_code: 200,
-            message: format!("User found with validator_id"),
+            message: if validator_id.is_some() { 
+                format!("User found with validator_id") 
+            } else { 
+                format!("User found") 
+            },
             user_data: Some(UserData {
                 user_id: existing_user.id,
-                validator_id: Some(validator_id),
+                validator_id,
             }),
         });
+
+        println!("📤 Sending login response");
+        return (updated_jar, response);
     } else {
-        return Json(LoginResponse {
-            status_code: 404,
-            message: format!("User not found"),
-            user_data: None,
-        });
+        println!("❌ User not found for email: {}", email);
+        return (
+            jar,
+            Json(LoginResponse {
+                status_code: 404,
+                message: format!("User not found"),
+                user_data: None,
+            }),
+        );
     }
 }
 
 #[axum::debug_handler]
 async fn check_session_status(
     State(app_state): State<CookieAppState>,
-    cookies: CookieJar,
+    jar: CookieJar,
 ) -> Json<SessionStatusResponse> {
-    match get_authenticated_user_id(&cookies, &app_state.session_store).await {
+    println!("🔍 === SESSION STATUS CHECK STARTED ===");
+    
+    match get_authenticated_user_id(&jar, &app_state.session_store).await {
         Ok(user_id) => {
             println!("✅ Found valid session for user: {} from server", user_id);
             let user_result = user::Entity::find_by_id(user_id).one(&app_state.db).await;
 
             match user_result {
                 Ok(Some(user)) => {
+                    println!("✅ User found in database: {}", user.id);
+                    
                     let validator_info = validator::Entity::find()
                         .filter(validator::Column::UserId.eq(user_id))
                         .one(&app_state.db)
                         .await
                         .unwrap_or(None);
 
-                    Json(SessionStatusResponse {
+                    match &validator_info {
+                        Some(validator) => {
+                            println!("✅ Validator found: {}", validator.id);
+                        }
+                        None => {
+                            println!("ℹ️ User is not a validator");
+                        }
+                    }
+
+                    let response = SessionStatusResponse {
                         status_code: 200,
                         is_valid: true,
                         user_id: Some(user.id.to_string()),
                         validator_id: validator_info.map(|v| v.id.to_string()),
+                    };
+                    
+                    println!("📤 Sending successful session response: {:?}", response);
+                    Json(response)
+                }
+                Ok(None) => {
+                    println!("❌ User not found in database for ID: {}", user_id);
+                    Json(SessionStatusResponse {
+                        status_code: 401,
+                        is_valid: false,
+                        user_id: None,
+                        validator_id: None,
                     })
                 }
-                _ => Json(SessionStatusResponse {
-                    status_code: 401,
-                    is_valid: false,
-                    user_id: None,
-                    validator_id: None,
-                }),
+                Err(db_err) => {
+                    println!("❌ Database error: {}", db_err);
+                    Json(SessionStatusResponse {
+                        status_code: 401,
+                        is_valid: false,
+                        user_id: None,
+                        validator_id: None,
+                    })
+                }
             }
         }
-        Err(_) => {
-            println!("❌ No valid session found from server");
+        Err(status_code) => {
+            println!("❌ No valid session found from server - Status: {:?}", status_code);
             Json(SessionStatusResponse {
                 status_code: 401,
                 is_valid: false,
