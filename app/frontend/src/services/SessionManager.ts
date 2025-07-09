@@ -1,5 +1,4 @@
-import axios from "axios";
-
+import axios from 'axios';
 interface SessionResponse {
     isValid: boolean,
     userId: string,
@@ -7,15 +6,16 @@ interface SessionResponse {
 }
 
 class SessionManager {
+    static async checkSessionStatus(): Promise<SessionResponse | null> {
 
-    static async checkSessionStatus() {
 
         try {
+            console.log('🔍 Checking session status with server...');
+            console.log('🍪 Current browser cookies:', document.cookie || 'NONE');
 
-            console.log('checking session status with server...');
-            const response = await axios.get('http://localhost:3001/user/session-status', {
-                withCredentials: true
-            })
+            const response = await axios.get('http://127.0.0.1:3001/user/session-status', { withCredentials: true });
+
+            console.log('📊 Session status response:', response.data);
 
             if (response.data.status_code === 200) {
                 console.log('✅ Session is valid');
@@ -26,19 +26,25 @@ class SessionManager {
                     isValid: response.data.is_valid,
                     userId: response.data.user_id,
                     validatorId: response.data.validator_id
-                }
-            }
-            else {
-                console.log('✅  Session check success, did not get any valid session');
+                };
+            } else {
+                console.log('❌ Session check failed - Status:', response.data.status_code);
                 return {
-                    isValid: response.data.is_valid,
+                   isValid: response.data.is_valid,
                     userId: response.data.user_id,
                     validatorId: response.data.validator_id
-                }
+                };
             }
-        }
-        catch (e) {
-            console.log('Session check failed due to axios error:', e)
+        } catch (e: any) {
+            console.error('❌ Session check failed due to error:', e.message);
+            console.error('❌ Error response:', e.response?.data);
+            console.error('❌ Error status:', e.response?.status);
+
+            return {
+                isValid: false,
+                userId: '',
+                validatorId: null
+            };
         }
     }
 
@@ -50,24 +56,26 @@ class SessionManager {
             if (sessionStatus.validatorId) {
                 localStorage.setItem('validatorId', sessionStatus.validatorId);
                 console.log('🎫 Stored validator ID:', sessionStatus.validatorId);
-            }
-            else {
+            } else {
                 localStorage.removeItem('validatorId');
-                console.log('removed validator ID (user is not a validator)');
+                console.log('🗑️ Removed validator ID (user is not a validator)');
             }
         } else {
-            console.log('clearing localStorage due to invalid session')
+            console.log('🧹 Clearing localStorage due to invalid session');
             localStorage.removeItem('isLoggedIn');
             localStorage.removeItem('userId');
+            localStorage.removeItem('validatorId');
         }
     }
 
-    static getLocalUserData(){
+    static getLocalUserData() {
         return {
-            isLoggedIn : localStorage.getItem('isLoggedIn'),
-            userId : localStorage.getItem('userId'),
-            validatorId : localStorage.getItem('validatorId')
-        }
+            isLoggedIn: localStorage.getItem('isLoggedIn'),
+            userId: localStorage.getItem('userId'),
+            validatorId: localStorage.getItem('validatorId')
+        };
     }
+
 }
+
 export default SessionManager;
