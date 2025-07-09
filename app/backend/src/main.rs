@@ -6,7 +6,6 @@ use axum::{
 use migration::{Migrator, MigratorTrait};
 use sea_orm::Database;
 use std::{env, sync::Arc};
-use tower_cookies::CookieManagerLayer; // Add this import for cookie handling
 use tower_http::cors::CorsLayer;
 use websocket::manager::WebSocketManager;
 
@@ -44,7 +43,11 @@ async fn main() -> Result<(), std::io::Error> {
 
     // Initialize shared application state
     let ws_manager = Arc::new(WebSocketManager::new()); // WebSocket connection manager
-    let cookie_manager = Arc::new(SessionStore::new().await.expect("Failed to connect to redis - make sure redis server is running")); // In-memory session store
+    let cookie_manager = Arc::new(
+        SessionStore::new()
+            .await
+            .expect("Failed to connect to redis - make sure redis server is running"),
+    ); // In-memory session store
 
     // Create combined application state that includes database, websocket, and session management
     let app_state = CookieAppState {
@@ -77,20 +80,24 @@ async fn main() -> Result<(), std::io::Error> {
             "/notifications",
             routes::notification::notification_router().with_state(db.clone()),
         )
-        // Add middleware layers - order matters!
         .layer(
             CorsLayer::new()
-            .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
-            .allow_methods([axum::http::Method::GET, axum::http::Method::POST,axum::http::Method::PUT,axum::http::Method::PATCH, axum::http::Method::DELETE])
-            .allow_headers([
-                HeaderName::from_static("content-type"),
-                HeaderName::from_static("authorization"),
-                HeaderName::from_static("cookie"),
-                HeaderName::from_static("set-cookie"),
+                .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
+                .allow_methods([
+                    axum::http::Method::GET,
+                    axum::http::Method::POST,
+                    axum::http::Method::PUT,
+                    axum::http::Method::PATCH,
+                    axum::http::Method::DELETE,
+                ])
+                .allow_headers([
+                    HeaderName::from_static("content-type"),
+                    HeaderName::from_static("authorization"),
+                    HeaderName::from_static("cookie"),
+                    HeaderName::from_static("set-cookie"),
                 ])
                 .allow_credentials(true),
-            )
-        .layer(CookieManagerLayer::new());// Cookie handling middleware - must come before CORS
+        );
 
     // Start the server
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3001")
