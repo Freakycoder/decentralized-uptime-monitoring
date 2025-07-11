@@ -4,7 +4,6 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use uuid::Uuid;
 
 use crate::{ utils::jwt_extractor::{extract_jwt_from_headers}};
 
@@ -13,19 +12,16 @@ pub async fn jwt_auth_middleware(
     mut request: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
+    match extract_jwt_from_headers(&headers) {
+        Ok(user_details) => {
+            request.extensions_mut().insert(user_details.user_id);
 
-    if let Ok(user_details) = extract_jwt_from_headers(&headers){
-        request.extensions_mut().insert(user_details.user_id);
+            if let Some(validator_id) = user_details.validator_id {
+                request.extensions_mut().insert(validator_id);
+            }
 
-        if let Some(validator_id) = user_details.validator_id {
-            request.extensions_mut().insert(validator_id);
+            Ok(next.run(request).await)
         }
+        Err(status) => Err(status),
     }
-
-    Ok(next.run(request).await)
-}
-
-// Helper function to extract user_id from request extensions
-pub fn get_user_id_from_request(request: &Request) -> Option<Uuid> {
-    request.extensions().get::<Uuid>().copied()
 }
