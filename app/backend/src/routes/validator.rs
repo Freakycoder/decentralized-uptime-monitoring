@@ -1,49 +1,34 @@
 use crate::entities::validator;
+use crate::middleware::auth::jwt_auth_middleware;
 use crate::types::cookie::CookieAppState;
 use crate::types::user::{
     ValidatorData, ValidatorInput, VerifySignatureRequest, VerifyValidatorResponse,
 };
-use crate::utils::cookie_extractor::get_authenticated_user_id;
+use crate::utils::jwt_extractor::create_jwt;
 use axum::extract::State;
 use axum::http::StatusCode;
+use axum::middleware;
 use axum::response::IntoResponse;
-use axum::{debug_handler,routing::post, Json, Router};
+use axum::{debug_handler, extract::Extension, routing::post, Json, Router};
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 use solana_sdk::{pubkey::Pubkey, signature::Signature};
 use std::str::FromStr;
-use axum_extra::extract::cookie::CookieJar;
+use uuid::Uuid;
 
 pub fn validator_router() -> Router<CookieAppState> {
     Router::new()
         .route("/wallet", post(handle_connection))
         .route(
             "/verify-validator",
-            post(verify_validator))
+            post(verify_validator).layer(middleware::from_fn(jwt_auth_middleware)))
 }
 
 #[debug_handler]
 async fn verify_validator(
     State(app_state): State<CookieAppState>,
-    cookies: CookieJar,
+    Extension(user_id): Extension<Uuid>,
     Json(validator_data): Json<ValidatorInput>,
 ) -> Json<VerifyValidatorResponse> {
-
-    let session_id = match cookies.get("session_id"){
-        Some(id) => id,
-        None => return Json(VerifyValidatorResponse { status_code: 404, message: "failed to find session id".to_string(), validator_data: None })
-        };
-        
-
-    let user_id = match get_authenticated_user_id(&cookies, &app_state.session_store).await {
-        Ok(id) => id,
-        Err(_) => {
-            return Json(VerifyValidatorResponse {
-                status_code: 404,
-                message: "Failed to authenticate and get user id".to_string(),
-                validator_data: None,
-            });
-        }
-    };
     let device_id = validator_data.device_id;
     let proximity_range = 0.001;
 
@@ -61,6 +46,7 @@ async fn verify_validator(
             status_code: 500,
             message: format!("Database error occured : {}", db_err),
             validator_data: None,
+            token: None,
         });
     }
 
@@ -69,6 +55,7 @@ async fn verify_validator(
             status_code: 201,
             message: format!("A validator exist from same Device"),
             validator_data: None,
+            token: None,
         });
     }
 
@@ -83,15 +70,23 @@ async fn verify_validator(
 
     match new_validator.insert(&app_state.db).await {
         Ok(validator) => {
-            let is_updated = app_state.session_store
-                .modify_session(validator.id, &session_id.value())
-                .await;
+            println!("✅ New validator registered: {}", validator.id);
+            
+            // Create new JWT token with user_id and validator_id
+            let new_token = match create_jwt(user_id, Some(validator.id)) {
+                Ok(token) => Some(token),
+                Err(e) => {
+                    println!("❌ Failed to create JWT for validator: {}", e);
+                    return Json(VerifyValidatorResponse {
+                        status_code: 500,
+                        message: format!("Failed to create updated JWT token"),
+                        validator_data: None,
+                        token: None,
+                    });
+                }
+            };
 
-            if is_updated {
-                println!("Session updated for validator id : {}", validator.id);
-            } else {
-                println!("Falied to update session for validator : {}", validator.id);
-            }
+            println!("🔑 Created new JWT with validator_id for user: {}", user_id);
 
             return Json(VerifyValidatorResponse {
                 status_code: 201,
@@ -101,6 +96,7 @@ async fn verify_validator(
                     latitude: validator_data.latitude,
                     longitude: validator_data.longitude,
                 }),
+                token: new_token,
             });
         }
         Err(db_err) => {
@@ -108,6 +104,7 @@ async fn verify_validator(
                 status_code: 500,
                 message: format!("Db error occured : {}", db_err),
                 validator_data: None,
+                token: None,
             });
         }
     }
