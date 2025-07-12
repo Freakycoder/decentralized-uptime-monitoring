@@ -1,5 +1,4 @@
 use axum::{
-    http::{header::HeaderName, HeaderValue},
     routing::get,
     Router,
 };
@@ -11,6 +10,7 @@ use websocket::manager::WebSocketManager;
 
 pub mod cookie;
 pub mod entities;
+pub mod middleware;
 pub mod routes;
 pub mod types;
 pub mod utils;
@@ -81,26 +81,11 @@ async fn main() -> Result<(), std::io::Error> {
             routes::notification::notification_router().with_state(db.clone()),
         )
         .layer(
-            CorsLayer::new()
-                .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
-                .allow_methods([
-                    axum::http::Method::GET,
-                    axum::http::Method::POST,
-                    axum::http::Method::PUT,
-                    axum::http::Method::PATCH,
-                    axum::http::Method::DELETE,
-                ])
-                .allow_headers([
-                    HeaderName::from_static("content-type"),
-                    HeaderName::from_static("authorization"),
-                    HeaderName::from_static("cookie"),
-                    HeaderName::from_static("set-cookie"),
-                ])
-                .allow_credentials(true),
+            CorsLayer::very_permissive()
         );
 
     // Start the server
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3001")
+    let listener = tokio::net::TcpListener::bind("localhost:3001")
         .await
         .unwrap();
     println!("the server is running at port 3001");

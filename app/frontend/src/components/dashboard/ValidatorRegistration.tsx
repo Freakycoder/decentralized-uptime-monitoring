@@ -9,16 +9,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { fadeIn, slideUp } from '../../lib/framer-variants';
 import axios from 'axios';
 import { useNotifications } from '../../contexts/NotificationsContext';
-import bs58 from 'bs58';
 import {
   initSocket,
-  sendMessage,
-  setMessageHandler,
-  closeSocket,
-  checkForExistingConnection,
-  restoreConnectionIfExists,
-  getSocket
+  setMessageHandler
 } from 'shared';
+import api from '@/lib/axios';
 
 interface WebSocketConnectionStatus {
   connected: boolean;
@@ -26,7 +21,11 @@ interface WebSocketConnectionStatus {
   error: string | null;
 }
 
-const ValidatorRegistration = () => {
+interface ValidatorRegistrationProps {
+  onComplete?: () => void;
+}
+
+const ValidatorRegistration = ({ onComplete }: ValidatorRegistrationProps = {}) => {
   const router = useRouter();
   const { connected, publicKey, signMessage } = useWallet();
   const { setVisible } = useWalletModal();
@@ -35,6 +34,9 @@ const ValidatorRegistration = () => {
   const [loading, setLoading] = useState(false);
   const [locationError, setLocationError] = useState<string>('');
   const [step, setStep] = useState<'connect' | 'validate' | 'socket-connecting' | 'complete'>('connect');
+  const [showManualLocation, setShowManualLocation] = useState(false);
+  const [manualLat, setManualLat] = useState('');
+  const [manualLng, setManualLng] = useState('');
   const [socketStatus, setSocketStatus] = useState<WebSocketConnectionStatus>({
     connected: false,
     connecting: false,
@@ -75,24 +77,38 @@ const ValidatorRegistration = () => {
     }
   };
 
-  const getCurrentPosition = (): Promise<GeolocationPosition> => {
+  const getCurrentPosition = async (retryCount = 0): Promise<GeolocationPosition> => {
+    const maxRetries = 3;
+    const retryDelay = 2000; // 2 seconds between retries
+
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
         reject(new Error('GEOLOCATION_NOT_SUPPORTED'));
         return;
       }
 
+      // Progressive timeout - start with shorter timeout and increase for retries
+      const timeout = 8000 + (retryCount * 5000); // 8s, 13s, 18s
+      
       const options: PositionOptions = {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000
+        enableHighAccuracy: retryCount === 0, // Use high accuracy on first try, fallback to network-based
+        timeout: timeout,
+        maximumAge: retryCount > 0 ? 300000 : 60000 // Allow older cache on retries (5 minutes vs 1 minute)
       };
+
+      console.log(`📍 Attempting to get location (attempt ${retryCount + 1}/${maxRetries + 1}) with timeout: ${timeout}ms`);
 
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          console.log('✅ Location obtained successfully:', {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+            timestamp: new Date(position.timestamp).toISOString()
+          });
           resolve(position);
         },
-        (error) => {
+        async (error) => {
           let errorMessage = '';
           switch (error.code) {
             case error.PERMISSION_DENIED:
@@ -108,7 +124,29 @@ const ValidatorRegistration = () => {
               errorMessage = 'UNKNOWN_ERROR';
               break;
           }
-          reject(new Error(errorMessage));
+          
+          console.warn(`⚠️ Location attempt ${retryCount + 1} failed:`, errorMessage);
+
+          // Don't retry for permission denied - user needs to manually allow
+          if (error.code === error.PERMISSION_DENIED) {
+            reject(new Error(errorMessage));
+            return;
+          }
+
+          // Retry for timeout and position unavailable errors
+          if (retryCount < maxRetries && (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE)) {
+            console.log(`🔄 Retrying location request in ${retryDelay}ms...`);
+            setTimeout(async () => {
+              try {
+                const position = await getCurrentPosition(retryCount + 1);
+                resolve(position);
+              } catch (retryError) {
+                reject(retryError);
+              }
+            }, retryDelay);
+          } else {
+            reject(new Error(errorMessage));
+          }
         },
         options
       );
@@ -130,7 +168,7 @@ const ValidatorRegistration = () => {
 
     try {
 
-      const wsUrl = "ws://127.0.0.1:3001/ws/upgrade";
+      const wsUrl = "ws://localhost:3001/ws/upgrade";
 
       const socket = await initSocket({
         wsUrl,
@@ -143,13 +181,9 @@ const ValidatorRegistration = () => {
 
       addNotification(
         'Network Connection Established',
-        'Successfully connected to the validator network.'
+        'Successfully connected to the validator network.',
+        'success'
       );
-
-      setTimeout(() => {
-        setStep('complete');
-      }, 3000);
-
 
       setTimeout(() => {
         setStep('complete');
@@ -165,53 +199,89 @@ const ValidatorRegistration = () => {
     }
   };
 
-  const handleValidatorRegistration = async () => {
-    if (!connected || !publicKey) {
-      setStep('connect');
-      return;
-    }
+  const handleValidatorRegistrationWithManualLocation = async (manualLat: number, manualLng: number) => {
+    await performValidatorRegistration(manualLat, manualLng);
+  };
 
+  const performValidatorRegistration = async (lat?: number, lng?: number) => {
     console.log('🚀 Starting validator registration process...');
     setLoading(true);
     setLocationError('');
 
     try {
-      // 1. Get user's geolocation
+      // 1. Get user's geolocation (if not provided manually)
       let latitude: number;
       let longitude: number;
 
-      try {
-        console.log('📍 Getting user location...');
-        const position = await getCurrentPosition();
-        latitude = position.coords.latitude;
-        longitude = position.coords.longitude;
-        console.log('✅ Location obtained:', { latitude, longitude });
-      } catch (locationErr: any) {
-        const errorMessage = locationErr.message;
+      if (lat !== undefined && lng !== undefined) {
+        // Use manual coordinates
+        latitude = lat;
+        longitude = lng;
+        console.log('📍 Using manual coordinates:', { latitude, longitude });
+        addNotification(
+          'Manual Location Set',
+          `Using coordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+          'info'
+        );
+      } else {
+        // Auto-detect location
+        try {
+          console.log('📍 Getting user location...');
+          addNotification(
+            'Getting Location',
+            'Attempting to get your location for validator registration...',
+            'info'
+          );
+          
+          const position = await getCurrentPosition();
+          latitude = position.coords.latitude;
+          longitude = position.coords.longitude;
+          
+          console.log('✅ Location obtained:', { 
+            latitude, 
+            longitude, 
+            accuracy: position.coords.accuracy 
+          });
 
-        let userFriendlyMessage = '';
-        switch (errorMessage) {
-          case 'GEOLOCATION_NOT_SUPPORTED':
-            userFriendlyMessage = 'Your browser does not support geolocation. Please use a modern browser.';
-            break;
-          case 'PERMISSION_DENIED':
-            userFriendlyMessage = 'Location permission was denied. Please enable location access and try again.';
-            break;
-          case 'POSITION_UNAVAILABLE':
-            userFriendlyMessage = 'Your location could not be determined. Please check your device settings.';
-            break;
-          case 'TIMEOUT':
-            userFriendlyMessage = 'Location request timed out. Please try again.';
-            break;
-          default:
-            userFriendlyMessage = 'Unable to get your location. Please try again.';
+          addNotification(
+            'Location Obtained',
+            `Location found with ${Math.round(position.coords.accuracy)}m accuracy`,
+            'success'
+          );
+        } catch (locationErr: any) {
+          const errorMessage = locationErr.message;
+
+          let userFriendlyMessage = '';
+          let helpText = '';
+          
+          switch (errorMessage) {
+            case 'GEOLOCATION_NOT_SUPPORTED':
+              userFriendlyMessage = 'Your browser does not support geolocation. Please use a modern browser.';
+              helpText = 'Try using Chrome, Firefox, Safari, or Edge.';
+              break;
+            case 'PERMISSION_DENIED':
+              userFriendlyMessage = 'Location permission was denied. Please enable location access and try again.';
+              helpText = 'Click the location icon in your browser\'s address bar and allow location access.';
+              break;
+            case 'POSITION_UNAVAILABLE':
+              userFriendlyMessage = 'Your location could not be determined after multiple attempts.';
+              helpText = 'Please check your device settings, ensure location services are enabled, and try again.';
+              break;
+            case 'TIMEOUT':
+              userFriendlyMessage = 'Location request timed out after multiple attempts.';
+              helpText = 'Please check your internet connection and try again.';
+              break;
+            default:
+              userFriendlyMessage = 'Unable to get your location after multiple attempts.';
+              helpText = 'Please try again or check your device settings.';
+          }
+
+          console.error('❌ Location error after retries:', errorMessage);
+          setLocationError(`${userFriendlyMessage}\n\n${helpText}`);
+          addNotification('Location Error', userFriendlyMessage, 'error');
+          setLoading(false);
+          return;
         }
-
-        console.error('❌ Location error:', errorMessage);
-        setLocationError(userFriendlyMessage);
-        addNotification('Location Error', userFriendlyMessage);
-        setLoading(false);
-        return;
       }
 
       // 2. Generate a device ID
@@ -228,54 +298,139 @@ const ValidatorRegistration = () => {
 
       console.log('✍️ Signing message with wallet...');
       const messageBytes = new TextEncoder().encode(message);
-      const signature = await signMessage(messageBytes);
-      const signatureBase58 = bs58.encode(signature);
-
-      // 5. Register as validator with the API
+      await signMessage(messageBytes);
+      // Note: Signature verification would be done here if required by the backend
+      
+      // 6. Register as validator with the API
       console.log('📡 Sending registration to backend...');
-      const response = await axios.post('http://127.0.0.1:3001/validator/verify-validator', {
-        wallet_address: publicKey.toString(),
+      
+      // Get user_id from localStorage for the request
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        throw new Error('User ID not found. Please login again.');
+      }
+
+      const requestPayload = {
+        user_id: userId,
+        wallet_address: publicKey?.toString() || '',
         latitude,
         longitude,
-        device_id: deviceId,
-      }, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        }
-      });
+        device_id: deviceId
+      };
+      
+      console.log('📡 Request payload:', requestPayload);
+      
+      const response = await api.post('http://localhost:3001/validator/verify-validator', requestPayload);
 
       console.log('📡 Backend response:', response.data);
 
       if (response.data && response.data.status_code === 201) {
-        console.log('✅ Validator registration successful!');
+        console.log('✅ Validator registration response:', response.data);
 
-        // Mark user as validated
-        setValidated(true);
+        if (response.data.validator_data) {
+          // New validator created successfully
+          console.log('✅ New validator registration successful!');
 
-        addNotification(
-          'Validator Registration Successful',
-          'You are now registered as a validator. Connecting to the network...'
-        );
+          // Update localStorage with validator ID
+          localStorage.setItem('validatorId', response.data.validator_data.validator_id);
 
-        // Establish WebSocket connection after successful registration
-        // Use the publicKey as validator ID since that's what we're using
-        await establishWebsocketConnection(response.data.validator_data.validator_id, latitude, longitude);
+          // Mark user as validated
+          setValidated(true);
+
+          addNotification(
+            'Validator Registration Successful',
+            'You are now registered as a validator. Connecting to the network...',
+            'success'
+          );
+
+          // Establish WebSocket connection after successful registration
+          await establishWebsocketConnection(response.data.validator_data.validator_id, latitude, longitude);
+        } else {
+          // Validator already exists from same device
+          console.log('ℹ️ Validator already exists from this device');
+          addNotification(
+            'Validator Already Exists',
+            response.data.message || 'A validator already exists from this device',
+            'warning'
+          );
+          
+          // Try to get validator ID from session status
+          try {
+            const sessionResponse = await axios.get('http://localhost:3001/user/session-status', {
+              withCredentials: true
+            });
+            
+            if (sessionResponse.data.validator_id) {
+              localStorage.setItem('validatorId', sessionResponse.data.validator_id);
+              console.log('✅ Retrieved existing validator ID from session');
+            }
+          } catch (error) {
+            console.warn('⚠️ Could not retrieve validator ID from session:', error);
+          }
+          
+          // Still mark as validated since they have a validator registration
+          setValidated(true);
+          setStep('complete');
+        }
       } else {
         throw new Error(response.data.message || 'Failed to register as validator');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Validator registration error:', error);
-      addNotification(
-        'Registration Failed',
-        'Could not register as a validator. Please try again.'
-      );
+      
+      // Log detailed error information
+      if (error.response) {
+        console.error('❌ Response status:', error.response.status);
+        console.error('❌ Response data:', error.response.data);
+        console.error('❌ Response headers:', error.response.headers);
+        
+        // Show specific error message from server if available
+        const errorMessage = error.response.data?.message || 
+                            error.response.data?.detail || 
+                            (typeof error.response.data === 'string' ? error.response.data : null) ||
+                            'Could not register as a validator. Please try again.';
+        addNotification(
+          'Registration Failed',
+          errorMessage,
+          'error'
+        );
+      } else if (error.request) {
+        console.error('❌ Request error:', error.request);
+        addNotification(
+          'Registration Failed',
+          'Network error. Please check your connection and try again.',
+          'error'
+        );
+      } else {
+        console.error('❌ Error message:', error.message);
+        addNotification(
+          'Registration Failed',
+          'Could not register as a validator. Please try again.',
+          'error'
+        );
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const handleValidatorRegistration = async () => {
+    if (!connected || !publicKey) {
+      setStep('connect');
+      return;
+    }
+
+    await performValidatorRegistration();
+  };
+
   const handleRetryLocation = () => {
     setLocationError('');
+    console.log('🔄 User requested location retry');
+    addNotification(
+      'Retrying Location',
+      'Retrying location request with improved settings...',
+      'info'
+    );
     handleValidatorRegistration();
   };
 
@@ -293,7 +448,8 @@ const ValidatorRegistration = () => {
         console.error('❌ Failed to retry WebSocket connection:', error);
         addNotification(
           'Retry Failed',
-          'Could not establish connection. You can continue without real-time features.'
+          'Could not establish connection. You can continue without real-time features.',
+          'general'
         );
       }
     }
@@ -344,26 +500,98 @@ const ValidatorRegistration = () => {
                 {locationError && (
                   <div className="mb-4 p-3 bg-destructive/20 border border-destructive/30 rounded-md">
                     <div className="text-destructive text-sm font-medium mb-2">Location Error</div>
-                    <div className="text-destructive text-sm mb-3">{locationError}</div>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={handleRetryLocation}
-                        size="sm"
-                        variant="outline"
-                        className="border-destructive text-destructive hover:bg-destructive/10"
-                        disabled={loading}
-                      >
-                        Retry
-                      </Button>
-                      <Button
-                        onClick={() => window.location.reload()}
-                        size="sm"
-                        variant="outline"
-                        className="border-destructive text-destructive hover:bg-destructive/10"
-                      >
-                        Refresh Page
-                      </Button>
-                    </div>
+                    <div className="text-destructive text-sm mb-3 whitespace-pre-line">{locationError}</div>
+                    
+                    {!showManualLocation ? (
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleRetryLocation}
+                            size="sm"
+                            variant="outline"
+                            className="border-destructive text-destructive hover:bg-destructive/10"
+                            disabled={loading}
+                          >
+                            Retry Auto-Detection
+                          </Button>
+                          <Button
+                            onClick={() => setShowManualLocation(true)}
+                            size="sm"
+                            variant="outline"
+                            className="border-amber-500 text-amber-600 hover:bg-amber-500/10"
+                          >
+                            Enter Manually
+                          </Button>
+                        </div>
+                        <Button
+                          onClick={() => window.location.reload()}
+                          size="sm"
+                          variant="outline"
+                          className="w-full border-destructive text-destructive hover:bg-destructive/10"
+                        >
+                          Refresh Page
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="text-amber-600 text-xs font-medium">
+                          Manual Location Entry
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="number"
+                            placeholder="Latitude (e.g., 40.7128)"
+                            value={manualLat}
+                            onChange={(e) => setManualLat(e.target.value)}
+                            className="px-2 py-1 text-xs border border-amber-300 rounded"
+                            step="any"
+                          />
+                          <input
+                            type="number"
+                            placeholder="Longitude (e.g., -74.0060)"
+                            value={manualLng}
+                            onChange={(e) => setManualLng(e.target.value)}
+                            className="px-2 py-1 text-xs border border-amber-300 rounded"
+                            step="any"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => {
+                              const lat = parseFloat(manualLat);
+                              const lng = parseFloat(manualLng);
+                              if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                                setLocationError('');
+                                setShowManualLocation(false);
+                                handleValidatorRegistrationWithManualLocation(lat, lng);
+                              } else {
+                                addNotification('Invalid Coordinates', 'Please enter valid latitude (-90 to 90) and longitude (-180 to 180)', 'error');
+                              }
+                            }}
+                            size="sm"
+                            className="bg-amber-600 hover:bg-amber-700 text-white"
+                            disabled={loading || !manualLat || !manualLng}
+                          >
+                            Use Manual Location
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              setShowManualLocation(false);
+                              setManualLat('');
+                              setManualLng('');
+                            }}
+                            size="sm"
+                            variant="outline"
+                            className="border-gray-400 text-gray-600"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                        <div className="text-xs text-amber-600">
+                          You can find your coordinates at <a href="https://www.latlong.net/" target="_blank" rel="noopener noreferrer" className="underline">latlong.net</a>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -461,12 +689,13 @@ const ValidatorRegistration = () => {
 
                 <Button
                   onClick={() => {
-                    console.log('🏠 Redirecting to dashboard');
-                    router.push('/home');
+                    console.log('🏠 Redirecting to validator dashboard');
+                    onComplete?.(); // Close the modal if callback provided
+                    router.push('/home/validator');
                   }}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
-                  Continue to Dashboard
+                  Continue to Validator Dashboard
                 </Button>
               </div>
             </motion.div>

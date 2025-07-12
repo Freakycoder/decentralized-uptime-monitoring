@@ -565,6 +565,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "axum-extra"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "45bf463831f5131b7d3c756525b305d40f1185b688565648a92e1392ca35713d"
+dependencies = [
+ "axum",
+ "axum-core",
+ "bytes",
+ "cookie",
+ "futures-util",
+ "http",
+ "http-body",
+ "http-body-util",
+ "mime",
+ "pin-project-lite",
+ "rustversion",
+ "serde",
+ "tower",
+ "tower-layer",
+ "tower-service",
+]
+
+[[package]]
 name = "axum-macros"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -579,7 +602,9 @@ dependencies = [
 name = "backend"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "axum",
+ "axum-extra",
  "bcrypt",
  "bs58",
  "bytes",
@@ -592,6 +617,7 @@ dependencies = [
  "jsonwebtoken",
  "log",
  "migration",
+ "redis",
  "reqwest",
  "sea-orm",
  "serde",
@@ -997,6 +1023,20 @@ name = "colorchoice"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b63caa9aa9397e2d9480a9b13673856c78d8ac123288526c37d7839f2a86990"
+
+[[package]]
+name = "combine"
+version = "4.6.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba5a308b75df32fe02788e748662718f03fde005016435c444eea572398219fd"
+dependencies = [
+ "bytes",
+ "futures-core",
+ "memchr",
+ "pin-project-lite",
+ "tokio",
+ "tokio-util",
+]
 
 [[package]]
 name = "console_error_panic_hook"
@@ -2968,6 +3008,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "redis"
+version = "0.32.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f0f6a8c53351d89a3869a703459995a0bcadcfa846002707fbc7e5cca235c4a"
+dependencies = [
+ "bytes",
+ "cfg-if",
+ "combine",
+ "futures-util",
+ "itoa",
+ "num-bigint",
+ "percent-encoding",
+ "pin-project-lite",
+ "ryu",
+ "serde",
+ "serde_json",
+ "sha1_smol",
+ "socket2",
+ "tokio",
+ "tokio-util",
+ "url",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.5.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3555,6 +3619,12 @@ dependencies = [
  "cpufeatures",
  "digest 0.10.7",
 ]
+
+[[package]]
+name = "sha1_smol"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbfa15b3dddfee50a0fff136974b3e1bde555604ba463834a7eb7deb6417705d"
 
 [[package]]
 name = "sha2"

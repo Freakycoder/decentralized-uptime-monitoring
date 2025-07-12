@@ -10,7 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 const Sidebar = () => {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, isValidated } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
@@ -26,7 +26,7 @@ const Sidebar = () => {
   }, []);
 
   const isActive = (path: string) => {
-    if (path === '/home' && router.pathname === '/home') return true;
+    if (path === '/home' && (router.pathname === '/home' || router.pathname.startsWith('/home/'))) return true;
     return router.pathname === path;
   };
 
@@ -59,7 +59,7 @@ const Sidebar = () => {
             Dashboard
           </div>
           <nav className="space-y-1">
-            <Link href="/home">
+            <Link href={isValidated ? "/home/validator" : "/home/user"}>
               <motion.a
                 whileHover={{ x: 4 }}
                 className={cn(
@@ -76,33 +76,57 @@ const Sidebar = () => {
           </nav>
         </div>
 
-        {/* Contribution Methods */}
-        <div>
-          <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-4 px-2">
-            Contribution Methods
+        {/* Contribution Methods - Only for Validators */}
+        {isValidated && (
+          <div>
+            <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-4 px-2">
+              Contribution Methods
+            </div>
+            <nav className="space-y-1">
+              {contributionMethods.map((method) => {
+                // Map old IDs to new route structure
+                const getRoutePath = (id: string) => {
+                  switch (id) {
+                    case 'website-monitor':
+                      return '/home/validator/website-monitor';
+                    case 'network-metrics':
+                      return '/home/validator/network-metrics';
+                    case 'compute-resources':
+                      return '/home/validator/computing-resources';
+                    case 'geographic-data':
+                      return '/home/validator/geographic-data';
+                    case 'app-usage':
+                      return '/home/validator/app-usage-metrics';
+                    default:
+                      return `/home/validator/${id}`;
+                  }
+                };
+                
+                const routePath = getRoutePath(method.id);
+                
+                return (
+                  <Link key={method.id} href={routePath}>
+                    <motion.a
+                      whileHover={{ x: 4 }}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200",
+                        isActive(routePath)
+                          ? "bg-black text-white shadow-lg"
+                          : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                      )}
+                    >
+                      <span className="text-lg">{getContributionIcon(method.icon)}</span>
+                      <span className="text-sm">{method.name}</span>
+                      {method.active && (
+                        <div className="ml-auto w-2 h-2 bg-green-500 rounded-full"></div>
+                      )}
+                    </motion.a>
+                  </Link>
+                );
+              })}
+            </nav>
           </div>
-          <nav className="space-y-1">
-            {contributionMethods.map((method) => (
-              <Link key={method.id} href={`/${method.id}`}>
-                <motion.a
-                  whileHover={{ x: 4 }}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200",
-                    isActive(`/${method.id}`)
-                      ? "bg-black text-white shadow-lg"
-                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                  )}
-                >
-                  <span className="text-lg">{getContributionIcon(method.icon)}</span>
-                  <span className="text-sm">{method.name}</span>
-                  {method.active && (
-                    <div className="ml-auto w-2 h-2 bg-green-500 rounded-full"></div>
-                  )}
-                </motion.a>
-              </Link>
-            ))}
-          </nav>
-        </div>
+        )}
 
         {/* Account Section */}
         <div>

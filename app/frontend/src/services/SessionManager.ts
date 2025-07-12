@@ -1,4 +1,6 @@
-import axios from 'axios';
+import api from '../lib/axios';
+import TokenManager from './TokenManager';
+
 interface SessionResponse {
     isValid: boolean,
     userId: string,
@@ -7,18 +9,26 @@ interface SessionResponse {
 
 class SessionManager {
     static async checkSessionStatus(): Promise<SessionResponse | null> {
-
-
         try {
             console.log('🔍 Checking session status with server...');
-            console.log('🍪 Current browser cookies:', document.cookie || 'NONE');
+            
+            // Check if we have a token first
+            if (!TokenManager.hasToken()) {
+                console.log('❌ No JWT token found');
+                return {
+                    isValid: false,
+                    userId: '',
+                    validatorId: null
+                };
+            }
 
-            const response = await axios.get('http://127.0.0.1:3001/user/session-status', { withCredentials: true });
+            console.log('🔑 JWT token found, verifying with server...');
+            const response = await api.get('/user/session-status');
 
             console.log('📊 Session status response:', response.data);
 
             if (response.data.status_code === 200) {
-                console.log('✅ Session is valid');
+                console.log('✅ JWT is valid');
                 console.log('👤 User ID:', response.data.user_id);
                 console.log('🎫 Validator ID:', response.data.validator_id || null);
 
@@ -28,7 +38,7 @@ class SessionManager {
                     validatorId: response.data.validator_id
                 };
             } else {
-                console.log('❌ Session check failed - Status:', response.data.status_code);
+                console.log('❌ JWT verification failed - Status:', response.data.status_code);
                 return {
                    isValid: response.data.is_valid,
                     userId: response.data.user_id,
@@ -36,9 +46,12 @@ class SessionManager {
                 };
             }
         } catch (e: any) {
-            console.error('❌ Session check failed due to error:', e.message);
+            console.error('❌ JWT verification failed due to error:', e.message);
             console.error('❌ Error response:', e.response?.data);
             console.error('❌ Error status:', e.response?.status);
+
+            // Clear invalid token
+            TokenManager.removeToken();
 
             return {
                 isValid: false,

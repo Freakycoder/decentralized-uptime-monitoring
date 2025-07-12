@@ -18,7 +18,7 @@ const AddWebsiteBanner: React.FC = () => {
   const handler = async () => {
     const response = await axios.post("http://localhost:3001/website-monitor/add", {
       url_to_monitor: url
-    });
+    }, {withCredentials : true});
 
     SetMessage({
       status_code: response.data.status_code,

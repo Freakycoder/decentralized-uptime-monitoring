@@ -1,9 +1,15 @@
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { Notification } from '../types';
-import axios from 'axios';
+import api from '@/lib/axios';
+import TokenManager from '@/services/TokenManager';
 
-// For simplicity in this demo, we'll create a simple UUID function instead of using a package
+// For simp-idlicity in this demo, we'll create a simple UUID function instead of using a package
 const generateId = () => Math.random().toString(36).substring(2, 11);
+
+interface websiteData{
+    website_url : string,
+    website_id : string
+}
 
 interface NotificationsContextType {
     notifications: Notification[];
@@ -31,17 +37,15 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
     const validatorId = localStorage.getItem('validatorId');
 
     const loadNotifications = async () => {
-        if (!validatorId) {
-            console.log('❌ failed to fetch notifications since no validator ID found');
+        if (!validatorId || !TokenManager.hasToken()) {
+            console.log('❌ failed to fetch notifications since no validator ID or JWT token found');
             setLoading(false);
             return;
         }
         try {
             setLoading(true);
             setError(null);
-            const response = await axios.get(`http://localhost:3001/notifications/validator/${validatorId}`, {
-               withCredentials : true
-            });
+            const response = await api.get(`/notifications/validator/${validatorId}?validator_id=${validatorId}`);
 
             if (response.data.status_code === 200) {
                 const convertedNotifications: Notification[] = response.data.notifications.map((notif: any) => ({
@@ -69,27 +73,45 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
     };
 
     useEffect(() => {
-        loadNotifications()
+        const fetchNotifications = async () => {
+            await loadNotifications()
+        }
+        fetchNotifications()
     }, [validatorId]);
 
     // Add a new notification
-    const addNotification = async (title: string, message: string, type: string, data?: any) => {
+    const addNotification = async (title: string, message: string, type: string, website_url? : String, website_id? : String, action_taken? : String) => {
+        if (!validatorId || !TokenManager.hasToken()) {
+            console.error('❌ No validator ID or JWT token available');
+            return;
+        }
+
         const newNotification = {
             validator_id: validatorId,
             title,
             message,
-            created_at: Date.now(),
-            data: { url: data.url, website_id: data.website_id },
-            read: false,
+            website_url : website_url, 
+            website_id: website_id,
+            action_taken : action_taken,
             notification_type: type,
         };
 
-        let response = await axios.post("http://localhost:3001/", newNotification);
-        setNotifications(response.data.notification);
+        try {
+            let response = await api.post("/notifications/create-notification", newNotification);
+            setNotifications(response.data.notification);
+        } catch (error) {
+            console.error('Error creating notification:', error);
+            setError('Failed to create notification');
+        }
     };
 
     // Handle notification actions (accept/reject for monitoring tasks)
     const handleNotificationAction = async (id: string, action: 'accept' | 'reject') => {
+        if (!TokenManager.hasToken()) {
+            console.error('❌ No JWT token available');
+            return;
+        }
+
         const notification = notifications.find(n => n.id === id);
 
         if (action === 'accept' && notification?.notification_type === 'monitoring' && notification?.data) {
@@ -102,11 +124,9 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
             });
         }
         try {
-            const response = await axios.post(`http://localhost:3001/notification/${id}`, {
+            const response = await api.post(`/notification/${id}`, {
                 read: true,
                 action_taken: action
-            }, {
-                withCredentials : true
             })
 
             if (response.data.status_code === 200) {
@@ -151,15 +171,13 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
 
     // Mark a notification as read
     const markAsRead = async (id: string) => {
-        if (!validatorId) {
-            console.error('❌ No token available');
+        if (!validatorId || !TokenManager.hasToken()) {
+            console.error('❌ No validator ID or JWT token available');
             return;
         }
         try {
-            const response = await axios.patch(`http://localhost:3001/notifications/${id}`, {
+            const response = await api.patch(`/notifications/${id}`, {
                 read: true
-            }, {
-                withCredentials : true
             });
 
             if (response.data.status_code === 200) {
@@ -180,16 +198,14 @@ export const NotificationsProvider = ({ children }: { children: ReactNode }) => 
 
     // Mark all notifications as read
     const markAllAsRead = async() => {
-        if (!validatorId) {
-            console.error('❌ No validator ID or token available');
+        if (!validatorId || !TokenManager.hasToken()) {
+            console.error('❌ No validator ID or JWT token available');
             return;
         }
 
         try {
-            const response = await axios.put('http://localhost:3001/notifications/mark-all-read', {
+            const response = await api.put('/notifications/mark-all-read', {
                 validator_id: validatorId
-            }, {
-               withCredentials : true
             });
 
             if (response.data.status_code === 200) {

@@ -28,7 +28,7 @@ pub fn extract_jwt_from_headers(headers: &HeaderMap) -> Result<AuthenticatedUser
         return Err(StatusCode::UNAUTHORIZED);
     }
 
-    let token = &auth_header[7..]; // Remove "Bearer " prefix
+    let token = &auth_header[7..]; 
 
     let claims = verify_jwt(token).map_err(|_| StatusCode::UNAUTHORIZED)?;
 

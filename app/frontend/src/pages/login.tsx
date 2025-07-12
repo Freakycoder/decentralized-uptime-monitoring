@@ -39,7 +39,7 @@ const Login = () => {
       const result = await login(email, password);
       
       if (result.success) {
-        router.push('/home');
+        router.push('/home/user');
       } else {
         setError(result.message);
       }

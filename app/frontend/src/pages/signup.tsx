@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import axios from 'axios';
+import api from '@/lib/axios';
+import TokenManager from '@/services/TokenManager';
 
 const Signup = () => {
   const router = useRouter();
@@ -34,23 +35,27 @@ const Signup = () => {
     }
 
     try {
-      const response = await axios.post('http://127.0.0.1:3001/user/signup', {
+      const response = await api.post('/user/signup', {
         email: formData.email,
         password: formData.password
       });
 
-      if (response.data.status_code === 200 && response.data.token) {
-        localStorage.setItem('authToken', response.data.token);
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('isValidator', 'false');
+      if (response.data.status_code === 200 && response.data.user_id && response.data.token) {
+        // Store JWT token
+        TokenManager.setToken(response.data.token);
         
-        router.push('/home');
+        // Store user data
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('userId', response.data.user_id);
+        
+        router.push('/home/user');
       } else {
         setError(response.data.message || 'Signup failed. Please try again.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Signup error:', err);
-      setError('Registration failed. Please try again later.');
+      const errorMessage = err.response?.data?.message || 'Registration failed. Please try again later.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

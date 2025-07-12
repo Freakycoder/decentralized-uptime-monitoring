@@ -12,6 +12,7 @@ pub struct SignUpResponse {
     pub status_code: u32,
     pub message: String,
     pub user_id: Option<String>,
+    pub token: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -19,6 +20,7 @@ pub struct LoginResponse {
     pub status_code: u32,
     pub message: String,
     pub user_data: Option<UserData>,
+    pub token: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,6 +44,7 @@ pub struct VerifyValidatorResponse {
     pub status_code: u32,
     pub message: String,
     pub validator_data: Option<ValidatorData>,
+    pub token: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

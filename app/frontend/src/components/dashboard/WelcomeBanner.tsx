@@ -86,7 +86,7 @@ const WelcomeBanner: React.FC = () => {
 
   const confirmSelection = () => {
     if (selectedPath === 'user') {
-      router.push('/website-monitor');
+      router.push('/home/user');
     } else if (selectedPath === 'validator') {
       setShowConfirmation(false);
       alert('Validator registration will be implemented');
