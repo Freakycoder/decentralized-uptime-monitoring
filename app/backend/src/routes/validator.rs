@@ -1,6 +1,6 @@
 use crate::entities::validator;
 use crate::middleware::auth::jwt_auth_middleware;
-use crate::types::cookie::CookieAppState;
+use crate::types::redis::AppState;
 use crate::types::user::{
     ValidatorData, ValidatorInput, VerifySignatureRequest, VerifyValidatorResponse,
 };
@@ -15,7 +15,7 @@ use solana_sdk::{pubkey::Pubkey, signature::Signature};
 use std::str::FromStr;
 use uuid::Uuid;
 
-pub fn validator_router() -> Router<CookieAppState> {
+pub fn validator_router() -> Router<AppState> {
     Router::new()
         .route("/wallet", post(handle_connection))
         .route(
@@ -25,7 +25,7 @@ pub fn validator_router() -> Router<CookieAppState> {
 
 #[debug_handler]
 async fn verify_validator(
-    State(app_state): State<CookieAppState>,
+    State(app_state): State<AppState>,
     Extension(user_id): Extension<Uuid>,
     Json(validator_data): Json<ValidatorInput>,
 ) -> Json<VerifyValidatorResponse> {
