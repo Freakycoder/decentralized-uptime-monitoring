@@ -25,6 +25,7 @@ impl RedisPubSub {
         Ok(())
     }
 
+    // creating a pipeline from pub/sub to modify the stream data (filter out bad data).
     pub async fn subscribe_to_notifications(
         &self,
     ) -> Result<impl Stream<Item = ServerMessage>, Box<dyn std::error::Error + Send + Sync>> {
