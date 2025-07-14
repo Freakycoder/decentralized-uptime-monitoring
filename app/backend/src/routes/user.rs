@@ -1,5 +1,5 @@
 use crate::entities::validator;
-use crate::types::cookie::CookieAppState;
+use crate::types::redis::AppState;
 use crate::types::user::{LoginResponse, UserData};
 use crate::utils::jwt_extractor::{create_jwt};
 use crate::{
@@ -13,7 +13,7 @@ use axum::{
 };
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 
-pub fn user_router() -> Router<CookieAppState> {
+pub fn user_router() -> Router<AppState> {
     Router::new()
         .route("/signup", post(signup))
         .route("/signin", post(signin))
@@ -21,7 +21,7 @@ pub fn user_router() -> Router<CookieAppState> {
 
 #[axum::debug_handler]
 async fn signup(
-    State(app_state): State<CookieAppState>,
+    State(app_state): State<AppState>,
     Json(user_data): Json<UserInput>,
 ) -> Json<SignUpResponse> {
     let email = user_data.email;
@@ -63,18 +63,21 @@ async fn signup(
 
     match new_user.insert(&app_state.db).await {
         Ok(user) => {
-            let _session_id = match app_state.session_store.create_session(user.id).await {
-                Ok(id) => id,
-                Err(e) => {
-                    println!("❌ Failed to create session for user: {}", e);
-                    return Json(SignUpResponse {
-                        message: format!("failed creating a session for the user"),
-                        status_code: 500,
-                        user_id: None,
-                        token: None,
-                    });
-                }
-            };
+            // TODO: Redis session creation temporarily disabled
+            // let _session_id = match app_state.session_store.create_session(user.id).await {
+            //     Ok(id) => id,
+            //     Err(e) => {
+            //         println!("❌ Failed to create session for user: {}", e);
+            //         return Json(SignUpResponse {
+            //             message: format!("failed creating a session for the user"),
+            //             status_code: 500,
+            //             user_id: None,
+            //             token: None,
+            //         });
+            //     }
+            // };
+
+            println!("✅ User created successfully, skipping session creation");
 
             // Create JWT token
             let token = match create_jwt(user.id, None) {
@@ -111,7 +114,7 @@ async fn signup(
 
 #[axum::debug_handler]
 async fn signin(
-    State(app_state): State<CookieAppState>,
+    State(app_state): State<AppState>,
     Json(user_data): Json<UserInput>,
 ) -> Json<LoginResponse> {
     let email = user_data.email;
