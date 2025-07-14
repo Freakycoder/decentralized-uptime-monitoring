@@ -8,15 +8,14 @@ use std::{env, sync::Arc};
 use tower_http::cors::CorsLayer;
 use websocket::manager::WebSocketManager;
 
-pub mod cookie;
+pub mod redis;
 pub mod entities;
 pub mod middleware;
 pub mod routes;
 pub mod types;
 pub mod utils;
 pub mod websocket;
-
-use crate::{cookie::manager::SessionStore, types::cookie::CookieAppState};
+use crate::{redis::cookie_manager::SessionStore, types::redis::AppState};
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -43,17 +42,24 @@ async fn main() -> Result<(), std::io::Error> {
 
     // Initialize shared application state
     let ws_manager = Arc::new(WebSocketManager::new()); // WebSocket connection manager
-    let cookie_manager = Arc::new(
-        SessionStore::new()
-            .await
-            .expect("Failed to connect to redis - make sure redis server is running"),
-    ); // In-memory session store
+    
+    // TODO: Redis session store temporarily disabled
+    // let cookie_manager = Arc::new(
+    //     SessionStore::new()
+    //         .await
+    //         .expect("Failed to connect to redis - make sure redis server is running"),
+    // ); // In-memory session store
+
+    // Create a dummy session store for now (since we're using JWT tokens)
+    let dummy_client = redis::Client::open("redis://127.0.0.1:6379").unwrap();
+    let dummy_cookie_manager = Arc::new(SessionStore { redis_client: dummy_client });
 
     // Create combined application state that includes database, websocket, and session management
-    let app_state = CookieAppState {
+    let app_state = AppState {
         db: db.clone(),
         ws: ws_manager.clone(),
-        session_store: cookie_manager.clone(),
+        session_store: dummy_cookie_manager.clone(),
+        pubsub : 
     };
 
     // Build the application router with all routes and middleware
@@ -80,6 +86,7 @@ async fn main() -> Result<(), std::io::Error> {
             "/notifications",
             routes::notification::notification_router().with_state(db.clone()),
         )
+        .nest("/sse", routes::sse::sse_router().with_state(app_state))
         .layer(
             CorsLayer::very_permissive()
         );
