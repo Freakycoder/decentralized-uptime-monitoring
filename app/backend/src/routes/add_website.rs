@@ -55,21 +55,28 @@ async fn website_to_add(
             
             println!("Publishing notifciation to validators via redis pubsub...");
 
-            let server_message = ServerMessage { url: url, id: website_details.id.to_string() };
+            let server_message = ServerMessage { url: url.clone(), id: website_details.id.to_string() };
 
             match state.pubsub.publish_to_validators(server_message).await{
                 Ok(_) => {
                     println!("Sucessfully published website through server");
+                    return Json(AddWebsiteResponse {
+                        status_code: 200,
+                        message: format!("New URL registered successfully and notifications sent to validators"),
+                    });
                 },
                 Err(e) => {
-                    println!("Error in publishing website through server {}",e)
+                    println!("Error in publishing website through server {}",e);
+                    Json(AddWebsiteResponse {
+                        status_code: 207, // Multi-Status: partial success
+                        message: format!(
+                            "Website '{}' was registered but failed to notify validators: {}",
+                            url, e
+                        ),
+                    })
                 }
             }
             
-            return Json(AddWebsiteResponse {
-                status_code: 200,
-                message: format!("New URL registered successfully and notifications sent to validators"),
-            });
         }
         Err(db_err) => {
             return Json(AddWebsiteResponse {
