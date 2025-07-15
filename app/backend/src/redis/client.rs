@@ -7,7 +7,7 @@ pub struct RedisClientManager {
 }
 
 impl RedisClientManager {
-    pub async fn new() -> Result<Self> {
+    pub async fn new() -> RedisResult<Self> {
         println!("Initializing shared redis client manager...");
         let redis_url =
             std::env::var("REDIS_URL").unwrap_or_else(|_| format!("redis://localost:6379"));
@@ -22,7 +22,7 @@ impl RedisClientManager {
         })
     }
 
-    pub fn get_client(&self) -> Client{
+    pub fn get_client(&self) -> Client {
         (*self.client).clone() // here with '*' we're dereferencing it. getting the actual Client object not a reference to it.
     }
 }
