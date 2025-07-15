@@ -21,7 +21,6 @@ async fn website_to_add(
     let url = website_data.url_to_monitor;
     let user_id  = website_data.user_id;
     let db = state.db;
-    let ws = state.ws;
 
     let existing_url = website_register::Entity::find()
         .filter(website_register::Column::WebsiteUrl.eq(&url))
