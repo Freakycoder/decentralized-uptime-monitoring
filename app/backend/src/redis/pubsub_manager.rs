@@ -2,13 +2,19 @@ use crate::types::websocket::ServerMessage;
 use futures_util::{Stream, StreamExt};
 use redis::{AsyncCommands, Client};
 
-
 #[derive(Clone, Debug)]
 pub struct RedisPubSub {
     pub redis_client: Client,
 }
 
 impl RedisPubSub {
+    pub fn new(redis_client: Client) -> Self {
+        println!("Initializing redis pub/sub with shared client");
+        Self {
+            redis_client: redis_client,
+        }
+    }
+
     pub async fn publish_to_validators(
         &self,
         message: ServerMessage,
@@ -16,7 +22,9 @@ impl RedisPubSub {
         let mut conn = self.redis_client.get_multiplexed_async_connection().await?;
         let message_json = serde_json::to_string(&message)?;
 
-        let subcribers_count: i32 = conn.publish("validator_notifcation", &message_json).await?; // it contains the amount of subcribers to the channel.
+        let subcribers_count: i32 = conn
+            .publish("validator_notifcations", &message_json)
+            .await?; // it contains the amount of subcribers to the channel.
         println!(
             "Published message {} to {} validator subcribers",
             message_json, subcribers_count
@@ -30,8 +38,12 @@ impl RedisPubSub {
         &self,
     ) -> Result<impl Stream<Item = ServerMessage>, Box<dyn std::error::Error + Send + Sync>> {
         let mut pubsub = self.redis_client.get_async_pubsub().await?;
-        pubsub.subscribe("validator_notification");
-        println!("Subscribed to channel to revieve message");
+
+        if let Err(e) = pubsub.subscribe("validator_notifications").await {
+            println!("❌ Failed to subscribe to channel: {}", e);
+            return Err(Box::new(e));
+        }
+        println!("Subscribed to channel to recieve messages");
 
         let stream = pubsub.into_on_message().filter_map(|server_message_raw| {
             async move {
