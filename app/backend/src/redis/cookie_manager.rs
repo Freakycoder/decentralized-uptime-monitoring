@@ -46,18 +46,13 @@ pub struct SessionStore {
 }
 
 impl SessionStore {
-    pub async fn new() -> RedisResult<Self> {
-        println!("Connecting to redis...");
-        let redis_url =
-            std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
-        let client = Client::open(redis_url)?;
-        let mut conn = client.get_multiplexed_async_connection().await?;
-        let _: () = conn.ping().await?;
-        println!("Redis client connected succesfully");
+    // we passed a share redis client created in client manager module.
+    pub fn new(redis_client : Client) -> Self {
+        println!("initializing cookie session with shared client manager");
 
-        Ok(Self {
-            redis_client: client,
-        })
+        Self {
+            redis_client: redis_client,
+        }
     }
 
     // Create a new session and return the session ID
