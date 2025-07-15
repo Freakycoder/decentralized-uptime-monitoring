@@ -12,7 +12,7 @@ use futures_util::{Stream, StreamExt};
 use uuid::Uuid;
 
 pub fn sse_router() -> Router<AppState> {
-    Router::new().route("/validator-notification/:validator_id", get(validator_notification_stream))
+    Router::new().route("/validator-notification/{validator_id}", get(validator_notification_stream))
 }
 
 // over here we're handling the sse_event_object_stream to axum to convert it into proper sse response and send to frontend.
