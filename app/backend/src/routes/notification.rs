@@ -55,9 +55,10 @@ async fn create_notification(
 #[axum::debug_handler]
 async fn get_user_notifications(
     State(db): State<DatabaseConnection>,
-    Path(validator_id): Path<Uuid>,
     Query(query): Query<NotificationQuery>,
 ) -> Json<GetNotificationsResponse> {
+
+    let validator_id = query.validator_id;
     let mut select = notification::Entity::find().filter(notification::Column::ValidatorId.eq(validator_id));
 
     // Apply filters
