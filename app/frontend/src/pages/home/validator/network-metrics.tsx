@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
-import AppAppLayout from '../../../components/AppAppLayout';
+import AppLayout from '../../../components/AppLayout';
 import { useAuth } from '../../../contexts/AuthContext';
 import SessionManager from '../../../services/SessionManager';
 import { 
