@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import type { AppProps } from 'next/app';
 import Head from 'next/head';
 import { ThemeProvider } from 'next-themes';
-import { NotificationsProvider } from '../contexts/NotificationsContext';
 import { AuthProvider } from '../contexts/AuthContext';
 import JupiterWalletProvider from '../components/wallet/JupiterWalletProvider';
 import '../styles/globals.css';
