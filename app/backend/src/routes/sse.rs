@@ -64,7 +64,7 @@ async fn create_notification_stream(
         match serde_json::to_string(&server_message) {
             Ok(json_data) => Ok(Event::default()
                 .data(json_data)
-                .event("notifiation")
+                .event("notification")
                 .comment(&format!("timestamp {}", chrono::Utc::now().timestamp()))),
 
             Err(serialization_error) => {
