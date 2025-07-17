@@ -201,28 +201,8 @@ export const useValidatorNotifications = (): UseValidatorNotificationsReturn => 
     
     const notification = notifications.find(n => n.id === notificationId);
     
-    if (action === 'accept' && notification?.notification_type === 'monitoring') {
-      // Send monitoring task to extension
-      try {
-        window.postMessage({
-          type: 'START_MONITORING',
-          url: notification.website_url,
-          websiteId: notification.website_id,
-          sessionId: `session_${Date.now()}`,
-          totalRuns: 8
-        }, '*');
-        
-        console.log('📡 Sent monitoring task to extension:', {
-          url: notification.website_url,
-          website_id: notification.website_id
-        });
-      } catch (error) {
-        console.error('❌ Failed to send task to extension:', error);
-      }
-    }
-    
     try {
-      // Update notification with action
+      // First, update notification with action in backend
       const response = await api.patch(`/notifications/${notificationId}`, {
         read: true,
         action_taken: action
@@ -241,6 +221,27 @@ export const useValidatorNotifications = (): UseValidatorNotificationsReturn => 
         );
         
         console.log(`✅ Notification ${notificationId} ${action}ed and saved`);
+        
+        // Only if backend update was successful AND action is accept, send to extension
+        if (action === 'accept' && notification?.notification_type === 'monitoring') {
+          try {
+            window.postMessage({
+              type: 'START_MONITORING',
+              url: notification.website_url,
+              websiteId: notification.website_id,
+              sessionId: `session_${Date.now()}`,
+              totalRuns: 8
+            }, '*');
+            
+            console.log('📡 Sent monitoring task to extension:', {
+              url: notification.website_url,
+              website_id: notification.website_id
+            });
+          } catch (error) {
+            console.error('❌ Failed to send task to extension:', error);
+            setError('Failed to send task to extension');
+          }
+        }
       } else {
         setError('Failed to update notification');
       }
