@@ -8,7 +8,8 @@ pub struct Model {
     pub validator_id: Uuid,
     pub title: String,
     pub message: String,
-    pub created_at: String,
+    #[sea_orm(default_value = "CURRENT_TIMESTAMP")]
+    pub created_at: Option<DateTimeWithTimeZone>,
     pub website_url : String,
     pub website_id : String,
     pub read: bool,

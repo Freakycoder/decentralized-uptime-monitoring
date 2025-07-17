@@ -23,7 +23,7 @@ impl RedisPubSub {
         let message_json = serde_json::to_string(&message)?;
 
         let subcribers_count: i32 = conn
-            .publish("validator_notifcations", &message_json)
+            .publish("validator_notifications", &message_json)
             .await?; // it contains the amount of subcribers to the channel.
         println!(
             "Published message {} to {} validator subcribers",
