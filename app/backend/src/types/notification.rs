@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use chrono;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateNotificationRequest {
@@ -79,7 +80,9 @@ impl From<crate::entities::notification::Model> for NotificationResponse {
             validator_id: model.validator_id,
             title: model.title,
             message: model.message,
-            created_at: model.created_at,
+            created_at: model.created_at
+                .map(|dt| dt.to_rfc3339())
+                .unwrap_or_else(|| chrono::Utc::now().to_rfc3339()),
             website_url : model.website_url,
             website_id : model.website_id,
             read: model.read,
