@@ -7,18 +7,19 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useAuth } from '../../contexts/AuthContext';
 import { fadeIn, slideUp } from '../../lib/framer-variants';
-import axios from 'axios';
-import { useNotifications } from '../../contexts/NotificationsContext';
-import {
-  initSocket,
-  setMessageHandler
-} from 'shared';
 import api from '@/lib/axios';
 
-interface WebSocketConnectionStatus {
-  connected: boolean;
-  connecting: boolean;
-  error: string | null;
+interface LocationResult {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  source: 'gps' | 'ip' | 'manual';
+}
+
+interface LocationProgress {
+  step: string;
+  message: string;
+  isError: boolean;
 }
 
 interface ValidatorRegistrationProps {
@@ -30,35 +31,13 @@ const ValidatorRegistration = ({ onComplete }: ValidatorRegistrationProps = {}) 
   const { connected, publicKey, signMessage } = useWallet();
   const { setVisible } = useWalletModal();
   const { setValidated } = useAuth();
-  const { addNotification } = useNotifications();
   const [loading, setLoading] = useState(false);
   const [locationError, setLocationError] = useState<string>('');
-  const [step, setStep] = useState<'connect' | 'validate' | 'socket-connecting' | 'complete'>('connect');
+  const [locationProgress, setLocationProgress] = useState<LocationProgress | null>(null);
+  const [step, setStep] = useState<'connect' | 'validate' | 'complete'>('connect');
   const [showManualLocation, setShowManualLocation] = useState(false);
   const [manualLat, setManualLat] = useState('');
   const [manualLng, setManualLng] = useState('');
-  const [socketStatus, setSocketStatus] = useState<WebSocketConnectionStatus>({
-    connected: false,
-    connecting: false,
-    error: null
-  });
-  const websocketRef = useRef<WebSocket | null>(null);
-
-  useEffect(() => {
-    const handleWebsocketMessage = (message: any) => {
-      console.log('📨 Processing WebSocket message in ValidatorRegistration:', message);
-      if (message.url && message.id) {
-        console.log('🌐 Received website monitoring task:', { url: message.url, id: message.id });
-        addNotification(
-          'New Monitoring Task',
-          `New website to monitor: ${message.url}`,
-          'monitoring',
-          { url: message.url, website_id: message.id }
-        );
-      }
-    }
-    setMessageHandler(handleWebsocketMessage);
-  }, [addNotification])
 
   // Check if wallet is connected when component mounts or when connection status changes
   useEffect(() => {
@@ -77,219 +56,246 @@ const ValidatorRegistration = ({ onComplete }: ValidatorRegistrationProps = {}) 
     }
   };
 
-  const getCurrentPosition = async (retryCount = 0): Promise<GeolocationPosition> => {
-    const maxRetries = 3;
-    const retryDelay = 2000; // 2 seconds between retries
-
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error('GEOLOCATION_NOT_SUPPORTED'));
-        return;
-      }
-
-      // Progressive timeout - start with shorter timeout and increase for retries
-      const timeout = 8000 + (retryCount * 5000); // 8s, 13s, 18s
-      
-      const options: PositionOptions = {
-        enableHighAccuracy: retryCount === 0, // Use high accuracy on first try, fallback to network-based
-        timeout: timeout,
-        maximumAge: retryCount > 0 ? 300000 : 60000 // Allow older cache on retries (5 minutes vs 1 minute)
-      };
-
-      console.log(`📍 Attempting to get location (attempt ${retryCount + 1}/${maxRetries + 1}) with timeout: ${timeout}ms`);
-
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          console.log('✅ Location obtained successfully:', {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-            timestamp: new Date(position.timestamp).toISOString()
-          });
-          resolve(position);
-        },
-        async (error) => {
-          let errorMessage = '';
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              errorMessage = 'PERMISSION_DENIED';
-              break;
-            case error.POSITION_UNAVAILABLE:
-              errorMessage = 'POSITION_UNAVAILABLE';
-              break;
-            case error.TIMEOUT:
-              errorMessage = 'TIMEOUT';
-              break;
-            default:
-              errorMessage = 'UNKNOWN_ERROR';
-              break;
-          }
-          
-          console.warn(`⚠️ Location attempt ${retryCount + 1} failed:`, errorMessage);
-
-          // Don't retry for permission denied - user needs to manually allow
-          if (error.code === error.PERMISSION_DENIED) {
-            reject(new Error(errorMessage));
-            return;
-          }
-
-          // Retry for timeout and position unavailable errors
-          if (retryCount < maxRetries && (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE)) {
-            console.log(`🔄 Retrying location request in ${retryDelay}ms...`);
-            setTimeout(async () => {
-              try {
-                const position = await getCurrentPosition(retryCount + 1);
-                resolve(position);
-              } catch (retryError) {
-                reject(retryError);
-              }
-            }, retryDelay);
-          } else {
-            reject(new Error(errorMessage));
-          }
-        },
-        options
-      );
-    });
-  };
-
-  const establishWebsocketConnection = async (
-    validatorId: string,
-    latitude: number,
-    longitude: number
-  ) => {
-    console.log('🔌 Starting WebSocket connection process...');
-    setStep('socket-connecting');
-    setSocketStatus({
-      connected: false,
-      connecting: true,
-      error: null
-    });
-
+  // Improved location retrieval with multiple fallback strategies
+  const getLocationWithFallbacks = async (): Promise<LocationResult> => {
+    // Strategy 1: Try GPS/Network location (most accurate)
     try {
+      const gpsLocation = await getGPSLocation();
+      return {
+        latitude: gpsLocation.latitude,
+        longitude: gpsLocation.longitude,
+        accuracy: gpsLocation.accuracy,
+        source: 'gps'
+      };
+    } catch (gpsError) {
+      console.log('📍 GPS location failed, trying IP fallback...', gpsError);
+    }
 
-      const wsUrl = "ws://localhost:3001/ws/upgrade";
-
-      const socket = await initSocket({
-        wsUrl,
-        setSocketStatus,
-        validatorData: { validatorId, latitude, longitude }
-      })
-      websocketRef.current = socket;
-
-      console.log('✅ Socket initialized and registration handled automatically!');
-
-      addNotification(
-        'Network Connection Established',
-        'Successfully connected to the validator network.',
-        'success'
-      );
-
-      setTimeout(() => {
-        setStep('complete');
-      }, 3000);
-
-    } catch (error) {
-      console.error('❌ Error establishing WebSocket connection:', error);
-      setSocketStatus({
-        connected: false,
-        connecting: false,
-        error: 'Failed to establish connection'
-      });
+    // Strategy 2: Try IP-based location (less accurate but more reliable)
+    try {
+      const ipLocation = await getIPLocation();
+      return {
+        latitude: ipLocation.latitude,
+        longitude: ipLocation.longitude,
+        source: 'ip'
+      };
+    } catch (ipError) {
+      console.log('🌐 IP location failed', ipError);
+      throw new Error('Both GPS and IP location failed. Please enter your location manually.');
     }
   };
 
-  const handleValidatorRegistrationWithManualLocation = async (manualLat: number, manualLng: number) => {
-    await performValidatorRegistration(manualLat, manualLng);
+  // Enhanced GPS location with better retry logic
+  const getGPSLocation = async (): Promise<{ latitude: number; longitude: number; accuracy: number }> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocation is not supported by this browser'));
+        return;
+      }
+
+      setLocationProgress({
+        step: 'gps',
+        message: 'Requesting location permission...',
+        isError: false
+      });
+
+      const timeout = 30000; // 30 seconds - more generous timeout
+      let attemptCount = 0;
+      const maxAttempts = 3;
+
+      const tryGetLocation = () => {
+        attemptCount++;
+        
+        setLocationProgress({
+          step: 'gps',
+          message: `Getting your location... (attempt ${attemptCount}/${maxAttempts})`,
+          isError: false
+        });
+
+        // Progressive options: start with high accuracy, then relax requirements
+        const options: PositionOptions = {
+          enableHighAccuracy: attemptCount === 1, // Only use high accuracy on first try
+          timeout: timeout / attemptCount, // Reduce timeout on retries
+          maximumAge: attemptCount === 1 ? 60000 : 300000 // Allow older cache on retries
+        };
+
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            console.log('✅ GPS location obtained:', {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy
+            });
+
+            setLocationProgress({
+              step: 'gps',
+              message: `Location found with ${Math.round(position.coords.accuracy)}m accuracy`,
+              isError: false
+            });
+
+            resolve({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy
+            });
+          },
+          (error) => {
+            console.warn(`⚠️ GPS attempt ${attemptCount} failed:`, error.message);
+
+            if (error.code === error.PERMISSION_DENIED) {
+              setLocationProgress({
+                step: 'gps',
+                message: 'Location permission denied. Trying alternative method...',
+                isError: true
+              });
+              reject(new Error('Location permission denied by user'));
+              return;
+            }
+
+            if (attemptCount < maxAttempts) {
+              // Retry with more relaxed settings
+              setTimeout(tryGetLocation, 1000);
+            } else {
+              setLocationProgress({
+                step: 'gps',
+                message: 'GPS location failed. Trying IP-based location...',
+                isError: true
+              });
+              reject(new Error(`GPS location failed after ${maxAttempts} attempts: ${error.message}`));
+            }
+          },
+          options
+        );
+      };
+
+      tryGetLocation();
+    });
   };
 
-  const performValidatorRegistration = async (lat?: number, lng?: number) => {
+  // IP-based location fallback using multiple services
+  const getIPLocation = async (): Promise<{ latitude: number; longitude: number }> => {
+    setLocationProgress({
+      step: 'ip',
+      message: 'Getting approximate location from IP address...',
+      isError: false
+    });
+
+    const ipServices = [
+      'https://ipapi.co/json/',
+      'https://api.ipgeolocation.io/ipgeo?apiKey=free',
+      'https://freegeoip.app/json/',
+      'https://ipinfo.io/json'
+    ];
+
+    for (const service of ipServices) {
+      try {
+        console.log(`🌐 Trying IP service: ${service}`);
+        
+        const response = await fetch(service, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Handle different response formats
+        let latitude: number, longitude: number;
+        
+        if (data.latitude && data.longitude) {
+          latitude = parseFloat(data.latitude);
+          longitude = parseFloat(data.longitude);
+        } else if (data.lat && data.lon) {
+          latitude = parseFloat(data.lat);
+          longitude = parseFloat(data.lon);
+        } else if (data.loc) {
+          // ipinfo.io format
+          const [lat, lon] = data.loc.split(',');
+          latitude = parseFloat(lat);
+          longitude = parseFloat(lon);
+        } else {
+          throw new Error('Invalid response format');
+        }
+
+        if (isNaN(latitude) || isNaN(longitude)) {
+          throw new Error('Invalid coordinates received');
+        }
+
+        console.log(`✅ IP location from ${service}:`, { latitude, longitude });
+        
+        setLocationProgress({
+          step: 'ip',
+          message: `Approximate location found (${data.city || 'Unknown city'}, ${data.country || 'Unknown country'})`,
+          isError: false
+        });
+
+        return { latitude, longitude };
+      } catch (error) {
+        console.warn(`❌ IP service ${service} failed:`, error);
+        continue;
+      }
+    }
+
+    throw new Error('All IP location services failed');
+  };
+
+  const handleValidatorRegistrationWithManualLocation = async (manualLat: number, manualLng: number) => {
+    await performValidatorRegistration(manualLat, manualLng, 'manual');
+  };
+
+  const performValidatorRegistration = async (lat?: number, lng?: number, source?: 'manual' | 'gps' | 'ip') => {
     console.log('🚀 Starting validator registration process...');
     setLoading(true);
     setLocationError('');
+    setLocationProgress(null);
 
     try {
-      // 1. Get user's geolocation (if not provided manually)
-      let latitude: number;
-      let longitude: number;
+      // 1. Get user's location
+      let location: LocationResult;
 
       if (lat !== undefined && lng !== undefined) {
         // Use manual coordinates
-        latitude = lat;
-        longitude = lng;
-        console.log('📍 Using manual coordinates:', { latitude, longitude });
-        addNotification(
-          'Manual Location Set',
-          `Using coordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
-          'info'
-        );
+        location = {
+          latitude: lat,
+          longitude: lng,
+          source: source || 'manual'
+        };
+        console.log('📍 Using manual coordinates:', location);
       } else {
-        // Auto-detect location
+        // Auto-detect location with fallbacks
         try {
-          console.log('📍 Getting user location...');
-          addNotification(
-            'Getting Location',
-            'Attempting to get your location for validator registration...',
-            'info'
-          );
-          
-          const position = await getCurrentPosition();
-          latitude = position.coords.latitude;
-          longitude = position.coords.longitude;
-          
-          console.log('✅ Location obtained:', { 
-            latitude, 
-            longitude, 
-            accuracy: position.coords.accuracy 
-          });
-
-          addNotification(
-            'Location Obtained',
-            `Location found with ${Math.round(position.coords.accuracy)}m accuracy`,
-            'success'
-          );
+          location = await getLocationWithFallbacks();
+          console.log('✅ Location obtained:', location);
         } catch (locationErr: any) {
-          const errorMessage = locationErr.message;
-
-          let userFriendlyMessage = '';
-          let helpText = '';
-          
-          switch (errorMessage) {
-            case 'GEOLOCATION_NOT_SUPPORTED':
-              userFriendlyMessage = 'Your browser does not support geolocation. Please use a modern browser.';
-              helpText = 'Try using Chrome, Firefox, Safari, or Edge.';
-              break;
-            case 'PERMISSION_DENIED':
-              userFriendlyMessage = 'Location permission was denied. Please enable location access and try again.';
-              helpText = 'Click the location icon in your browser\'s address bar and allow location access.';
-              break;
-            case 'POSITION_UNAVAILABLE':
-              userFriendlyMessage = 'Your location could not be determined after multiple attempts.';
-              helpText = 'Please check your device settings, ensure location services are enabled, and try again.';
-              break;
-            case 'TIMEOUT':
-              userFriendlyMessage = 'Location request timed out after multiple attempts.';
-              helpText = 'Please check your internet connection and try again.';
-              break;
-            default:
-              userFriendlyMessage = 'Unable to get your location after multiple attempts.';
-              helpText = 'Please try again or check your device settings.';
-          }
-
-          console.error('❌ Location error after retries:', errorMessage);
-          setLocationError(`${userFriendlyMessage}\n\n${helpText}`);
-          addNotification('Location Error', userFriendlyMessage, 'error');
+          console.error('❌ All location methods failed:', locationErr);
+          setLocationError(
+            'Unable to determine your location automatically. Please:\n\n' +
+            '1. Check that location services are enabled on your device\n' +
+            '2. Allow location access when prompted by your browser\n' +
+            '3. Try refreshing the page and allowing location access\n' +
+            '4. Use the "Enter Manually" option below\n\n' +
+            'If you\'re using a VPN, it may interfere with location detection.'
+          );
+          setLocationProgress(null);
           setLoading(false);
           return;
         }
       }
+
+      // Clear progress indicator
+      setLocationProgress(null);
 
       // 2. Generate a device ID
       const deviceId = 'device_' + Math.random().toString(36).substring(2, 10);
       console.log('🔧 Generated device ID:', deviceId);
 
       // 3. Create a validation message
-      const message = `I am registering as a validator with device ${deviceId} at coordinates ${latitude.toFixed(6)},${longitude.toFixed(6)}`;
+      const message = `I am registering as a validator with device ${deviceId} at coordinates ${location.latitude.toFixed(6)},${location.longitude.toFixed(6)}`;
 
       // 4. Sign the message with the wallet
       if (!signMessage) {
@@ -299,9 +305,8 @@ const ValidatorRegistration = ({ onComplete }: ValidatorRegistrationProps = {}) 
       console.log('✍️ Signing message with wallet...');
       const messageBytes = new TextEncoder().encode(message);
       await signMessage(messageBytes);
-      // Note: Signature verification would be done here if required by the backend
       
-      // 6. Register as validator with the API
+      // 5. Register as validator with the API
       console.log('📡 Sending registration to backend...');
       
       // Get user_id from localStorage for the request
@@ -313,14 +318,14 @@ const ValidatorRegistration = ({ onComplete }: ValidatorRegistrationProps = {}) 
       const requestPayload = {
         user_id: userId,
         wallet_address: publicKey?.toString() || '',
-        latitude,
-        longitude,
+        latitude: location.latitude,
+        longitude: location.longitude,
         device_id: deviceId
       };
       
       console.log('📡 Request payload:', requestPayload);
       
-      const response = await api.post('http://localhost:3001/validator/verify-validator', requestPayload);
+      const response = await api.post('/validator/verify-validator', requestPayload);
 
       console.log('📡 Backend response:', response.data);
 
@@ -334,39 +339,20 @@ const ValidatorRegistration = ({ onComplete }: ValidatorRegistrationProps = {}) 
           // Update localStorage with validator ID
           localStorage.setItem('validatorId', response.data.validator_data.validator_id);
 
+          // Update JWT token if provided
+          if (response.data.token) {
+            localStorage.setItem('token', response.data.token);
+            console.log('🔑 Updated JWT token with validator_id');
+          }
+
           // Mark user as validated
           setValidated(true);
 
-          addNotification(
-            'Validator Registration Successful',
-            'You are now registered as a validator. Connecting to the network...',
-            'success'
-          );
-
-          // Establish WebSocket connection after successful registration
-          await establishWebsocketConnection(response.data.validator_data.validator_id, latitude, longitude);
+          console.log('🎉 Validator registration completed successfully!');
+          setStep('complete');
         } else {
           // Validator already exists from same device
           console.log('ℹ️ Validator already exists from this device');
-          addNotification(
-            'Validator Already Exists',
-            response.data.message || 'A validator already exists from this device',
-            'warning'
-          );
-          
-          // Try to get validator ID from session status
-          try {
-            const sessionResponse = await axios.get('http://localhost:3001/user/session-status', {
-              withCredentials: true
-            });
-            
-            if (sessionResponse.data.validator_id) {
-              localStorage.setItem('validatorId', sessionResponse.data.validator_id);
-              console.log('✅ Retrieved existing validator ID from session');
-            }
-          } catch (error) {
-            console.warn('⚠️ Could not retrieve validator ID from session:', error);
-          }
           
           // Still mark as validated since they have a validator registration
           setValidated(true);
@@ -382,35 +368,24 @@ const ValidatorRegistration = ({ onComplete }: ValidatorRegistrationProps = {}) 
       if (error.response) {
         console.error('❌ Response status:', error.response.status);
         console.error('❌ Response data:', error.response.data);
-        console.error('❌ Response headers:', error.response.headers);
         
         // Show specific error message from server if available
         const errorMessage = error.response.data?.message || 
                             error.response.data?.detail || 
                             (typeof error.response.data === 'string' ? error.response.data : null) ||
                             'Could not register as a validator. Please try again.';
-        addNotification(
-          'Registration Failed',
-          errorMessage,
-          'error'
-        );
+        
+        setLocationError(`Registration failed: ${errorMessage}`);
       } else if (error.request) {
         console.error('❌ Request error:', error.request);
-        addNotification(
-          'Registration Failed',
-          'Network error. Please check your connection and try again.',
-          'error'
-        );
+        setLocationError('Network error. Please check your connection and try again.');
       } else {
         console.error('❌ Error message:', error.message);
-        addNotification(
-          'Registration Failed',
-          'Could not register as a validator. Please try again.',
-          'error'
-        );
+        setLocationError('Could not register as a validator. Please try again.');
       }
     } finally {
       setLoading(false);
+      setLocationProgress(null);
     }
   };
 
@@ -425,34 +400,9 @@ const ValidatorRegistration = ({ onComplete }: ValidatorRegistrationProps = {}) 
 
   const handleRetryLocation = () => {
     setLocationError('');
+    setLocationProgress(null);
     console.log('🔄 User requested location retry');
-    addNotification(
-      'Retrying Location',
-      'Retrying location request with improved settings...',
-      'info'
-    );
     handleValidatorRegistration();
-  };
-
-  const handleRetryWebSocket = async () => {
-    if (publicKey) {
-      // Get location again for retry
-      try {
-        const position = await getCurrentPosition();
-        await establishWebsocketConnection(
-          publicKey.toString(),
-          position.coords.latitude,
-          position.coords.longitude
-        );
-      } catch (error) {
-        console.error('❌ Failed to retry WebSocket connection:', error);
-        addNotification(
-          'Retry Failed',
-          'Could not establish connection. You can continue without real-time features.',
-          'general'
-        );
-      }
-    }
   };
 
   return (
@@ -468,7 +418,7 @@ const ValidatorRegistration = ({ onComplete }: ValidatorRegistrationProps = {}) 
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="text-center text-muted-foreground">
-            Validators contribute to the network by providing computing resources and data validation. In return, you earn rewards in SOL tokens.
+            Validators contribute to the network by monitoring websites and providing data validation. In return, you earn rewards in SOL tokens.
           </div>
 
           {step === 'connect' && (
@@ -497,6 +447,31 @@ const ValidatorRegistration = ({ onComplete }: ValidatorRegistrationProps = {}) 
                   Your wallet is connected. Now we need to register you as a validator on the network. This will require your location to help verify your identity.
                 </p>
 
+                {/* Location Progress Indicator */}
+                {locationProgress && (
+                  <div className={`mb-4 p-3 rounded-md border ${
+                    locationProgress.isError 
+                      ? 'bg-amber-50 border-amber-200' 
+                      : 'bg-blue-50 border-blue-200'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      {!locationProgress.isError && (
+                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      )}
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900">
+                          {locationProgress.step === 'gps' ? 'Getting Precise Location' : 
+                           locationProgress.step === 'ip' ? 'Getting Approximate Location' : 
+                           'Processing Location'}
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">
+                          {locationProgress.message}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {locationError && (
                   <div className="mb-4 p-3 bg-destructive/20 border border-destructive/30 rounded-md">
                     <div className="text-destructive text-sm font-medium mb-2">Location Error</div>
@@ -512,7 +487,7 @@ const ValidatorRegistration = ({ onComplete }: ValidatorRegistrationProps = {}) 
                             className="border-destructive text-destructive hover:bg-destructive/10"
                             disabled={loading}
                           >
-                            Retry Auto-Detection
+                            Retry Location
                           </Button>
                           <Button
                             onClick={() => setShowManualLocation(true)}
@@ -527,7 +502,7 @@ const ValidatorRegistration = ({ onComplete }: ValidatorRegistrationProps = {}) 
                           onClick={() => window.location.reload()}
                           size="sm"
                           variant="outline"
-                          className="w-full border-destructive text-destructive hover:bg-destructive/10"
+                          className="w-full border-gray-400 text-gray-600 hover:bg-gray-50"
                         >
                           Refresh Page
                         </Button>
@@ -543,7 +518,7 @@ const ValidatorRegistration = ({ onComplete }: ValidatorRegistrationProps = {}) 
                             placeholder="Latitude (e.g., 40.7128)"
                             value={manualLat}
                             onChange={(e) => setManualLat(e.target.value)}
-                            className="px-2 py-1 text-xs border border-amber-300 rounded"
+                            className="px-3 py-2 text-sm border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
                             step="any"
                           />
                           <input
@@ -551,7 +526,7 @@ const ValidatorRegistration = ({ onComplete }: ValidatorRegistrationProps = {}) 
                             placeholder="Longitude (e.g., -74.0060)"
                             value={manualLng}
                             onChange={(e) => setManualLng(e.target.value)}
-                            className="px-2 py-1 text-xs border border-amber-300 rounded"
+                            className="px-3 py-2 text-sm border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
                             step="any"
                           />
                         </div>
@@ -565,7 +540,7 @@ const ValidatorRegistration = ({ onComplete }: ValidatorRegistrationProps = {}) 
                                 setShowManualLocation(false);
                                 handleValidatorRegistrationWithManualLocation(lat, lng);
                               } else {
-                                addNotification('Invalid Coordinates', 'Please enter valid latitude (-90 to 90) and longitude (-180 to 180)', 'error');
+                                setLocationError('Please enter valid coordinates:\n• Latitude: -90 to 90\n• Longitude: -180 to 180');
                               }
                             }}
                             size="sm"
@@ -588,7 +563,7 @@ const ValidatorRegistration = ({ onComplete }: ValidatorRegistrationProps = {}) 
                           </Button>
                         </div>
                         <div className="text-xs text-amber-600">
-                          You can find your coordinates at <a href="https://www.latlong.net/" target="_blank" rel="noopener noreferrer" className="underline">latlong.net</a>
+                          💡 Find your coordinates at <a href="https://www.latlong.net/" target="_blank" rel="noopener noreferrer" className="underline font-medium">latlong.net</a>
                         </div>
                       </div>
                     )}
@@ -598,67 +573,23 @@ const ValidatorRegistration = ({ onComplete }: ValidatorRegistrationProps = {}) 
                 <Button
                   onClick={handleValidatorRegistration}
                   className="w-full bg-primary"
-                  disabled={loading}
+                  disabled={loading || !!locationProgress}
                 >
-                  {loading ? 'Registering...' : 'Register as Validator'}
+                  {loading ? 'Registering...' : 
+                   locationProgress ? 'Getting Location...' : 
+                   'Register as Validator'}
                 </Button>
 
-                <div className="mt-3 text-xs text-muted-foreground">
-                  <strong>Troubleshooting:</strong> If you're having location issues, please:
-                  <ul className="mt-1 ml-4 list-disc">
-                    <li>Allow location access when prompted</li>
-                    <li>Check your browser's location settings</li>
-                    <li>Ensure location services are enabled on your device</li>
-                    <li>Try using HTTPS if you're on HTTP</li>
-                  </ul>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {step === 'socket-connecting' && (
-            <motion.div variants={slideUp} className="space-y-4">
-              <div className="p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg">
-                <h3 className="font-medium text-blue-400 mb-2">Step 3: Connecting to Validator Network</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Establishing real-time connection to the validator network...
-                </p>
-
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="text-sm">
-                    {socketStatus.connecting ? 'Connecting to network...' :
-                      socketStatus.connected ? 'Connected successfully!' :
-                        socketStatus.error ? 'Connection failed' : 'Preparing connection...'}
-                  </span>
-                </div>
-
-                {socketStatus.error && (
-                  <div className="space-y-3">
-                    <div className="text-sm text-amber-400 bg-amber-500/20 p-2 rounded">
-                      Network connection failed, but you can still use the platform.
-                      Real-time features may be limited.
-                    </div>
-                    <div className="flex gap-2 justify-center">
-                      <Button
-                        onClick={handleRetryWebSocket}
-                        size="sm"
-                        variant="outline"
-                        className="border-blue-500 text-blue-400 hover:bg-blue-500/10"
-                        disabled={socketStatus.connecting}
-                      >
-                        Retry Connection
-                      </Button>
-                      <Button
-                        onClick={() => setStep('complete')}
-                        size="sm"
-                        variant="outline"
-                      >
-                        Continue Anyway
-                      </Button>
+                <div className="mt-4 text-xs text-muted-foreground">
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <div className="font-medium mb-2">📍 Location Detection Process:</div>
+                    <div className="space-y-1">
+                      <div>1. First, we try to get your precise GPS location</div>
+                      <div>2. If that fails, we use your IP address for approximate location</div>
+                      <div>3. If both fail, you can enter coordinates manually</div>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             </motion.div>
           )}
@@ -668,24 +599,9 @@ const ValidatorRegistration = ({ onComplete }: ValidatorRegistrationProps = {}) 
               <div className="p-4 bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-center">
                 <div className="text-emerald-400 text-4xl mb-2">🎉</div>
                 <h3 className="font-medium text-emerald-400 mb-2">Registration Complete!</h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  You are now registered as a validator and can start contributing to the network.
+                <p className="text-sm text-muted-foreground mb-4">
+                  You are now registered as a validator! You can now access the validator dashboard to start monitoring websites and earning rewards.
                 </p>
-
-                {/* WebSocket connection status */}
-                <div className="text-xs bg-secondary/50 rounded p-2 mb-3">
-                  <div className="font-medium mb-1">Network Status:</div>
-                  <div className="flex items-center justify-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${socketStatus.connected ? 'bg-emerald-500' :
-                      socketStatus.error ? 'bg-amber-500' : 'bg-gray-500'
-                      }`}></div>
-                    <span className="text-muted-foreground">
-                      {socketStatus.connected ? 'Connected to validator network' :
-                        socketStatus.error ? 'Limited connectivity (offline mode)' :
-                          'Network connection not established'}
-                    </span>
-                  </div>
-                </div>
 
                 <Button
                   onClick={() => {

@@ -1,8 +1,8 @@
 use axum::http::StatusCode;
 use axum_extra::extract::cookie::CookieJar;
 use uuid::Uuid;
-use crate::cookie::manager::SessionStore;
-use crate::types::cookie::SessionData;
+use crate::redis::cookie_manager::SessionStore;
+use crate::types::redis::SessionData;
 
 pub async fn authenticate_session(
     cookies: &CookieJar,

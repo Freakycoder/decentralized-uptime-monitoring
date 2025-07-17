@@ -3,7 +3,6 @@ import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import AppLayout from '../../../components/AppLayout';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useNotifications } from '../../../contexts/NotificationsContext';
 import { 
   Plus,
   CheckCircle,
@@ -20,7 +19,6 @@ const WebsiteMonitorPage = () => {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const { isAuthenticated, isValidated } = useAuth();
-  const { addNotification } = useNotifications();
   const [walletAddress, setWalletAddress] = useState('');
   
   // Website monitoring form state
@@ -70,11 +68,7 @@ const WebsiteMonitorPage = () => {
 
       if (response.data.status_code === 200) {
         setSuccess('Website successfully added for monitoring!');
-        addNotification(
-          'Website Added Successfully', 
-          `${websiteUrl} has been added to your monitoring list.`,
-          "monitoring"
-        );
+        
         setWebsiteUrl('');
       } else if (response.data.status_code === 409) {
         setError('Website is already being monitored');

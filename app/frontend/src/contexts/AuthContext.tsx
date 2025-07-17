@@ -9,7 +9,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isValidated: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
-  checkSession: () => Promise<boolean>; // New method for manual session checks
+  logout: () => void;
   setValidated: (validated: boolean) => void; // Add this to the interface
 }
 
@@ -22,27 +22,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   // Manual session check method
-  const checkSession = async (): Promise<boolean> => {
-    const sessionStatus = await SessionManager.checkSessionStatus();
+  // const checkSession = async (): Promise<boolean> => {
+  //   const sessionStatus = await SessionManager.checkSessionStatus();
 
-    if (sessionStatus?.isValid && sessionStatus.userId) {
-      setIsAuthenticated(true);
-      if (sessionStatus.validatorId) {
-        setIsValidated(true);
-      }
-      SessionManager.setLocalAuthState(sessionStatus);
-      return true;
-    } else {
-      setIsAuthenticated(false);
-      setIsValidated(false);
-      SessionManager.setLocalAuthState({
-        isValid: false,
-        userId: '',
-        validatorId: null
-      });
-      return false;
-    }
-  };
+  //   if (sessionStatus?.isValid && sessionStatus.userId) {
+  //     setIsAuthenticated(true);
+  //     if (sessionStatus.validatorId) {
+  //       setIsValidated(true);
+  //     }
+  //     SessionManager.setLocalAuthState(sessionStatus);
+  //     return true;
+  //   } else {
+  //     setIsAuthenticated(false);
+  //     setIsValidated(false);
+  //     SessionManager.setLocalAuthState({
+  //       isValid: false,
+  //       userId: '',
+  //       validatorId: null
+  //     });
+  //     return false;
+  //   }
+  // };
 
   // Initialize auth state from JWT token and localStorage
   useEffect(() => {
@@ -112,6 +112,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const logout = () => {
+    console.log('🚪 Logging out user...');
+    // Clear JWT token
+    TokenManager.removeToken();
+    
+    // Clear localStorage
+    localStorage.removeItem('userId');
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('validatorId');
+    
+    // Reset auth state
+    setIsAuthenticated(false);
+    setIsValidated(false);
+    
+    // Redirect to login
+    router.push('/login');
+  };
 
   // Don't render children until we've checked localStorage
   if (isLoading) {
@@ -123,7 +140,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       isAuthenticated,
       isValidated,
       login,
-      checkSession,
+      logout,
       setValidated: setIsValidated,
     }}>
       {children}

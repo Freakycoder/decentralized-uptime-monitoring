@@ -129,7 +129,8 @@ const WebsiteMonitor: React.FC = () => {
         // Add a notification
         addNotification(
           'Website Added Successfully', 
-          `${newWebsiteUrl} has been added to your monitoring list.`
+          `${newWebsiteUrl} has been added to your monitoring list.`,
+          'success'
         );
         
         // Generate random status history for the UI
@@ -154,20 +155,23 @@ const WebsiteMonitor: React.FC = () => {
         // Website already exists
         addNotification(
           'Website Already Exists', 
-          `${newWebsiteUrl} is already being monitored.`
+          `${newWebsiteUrl} is already being monitored.`,
+          'warning'
         );
       } else {
         // Some other error
         addNotification(
           'Error Adding Website', 
-          `Failed to add ${newWebsiteUrl}. Please try again.`
+          `Failed to add ${newWebsiteUrl}. Please try again.`,
+          'error'
         );
       }
     } catch (error) {
       console.error('Error adding website:', error);
       addNotification(
         'Error Adding Website', 
-        `Failed to add ${newWebsiteUrl}. Server error occurred.`
+        `Failed to add ${newWebsiteUrl}. Server error occurred.`,
+        'error'
       );
     } finally {
       setIsLoading(false);

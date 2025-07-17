@@ -134,20 +134,22 @@ const Sidebar = () => {
             Account
           </div>
           <nav className="space-y-1">
-            <Link href="/notifications">
-              <motion.a
-                whileHover={{ x: 4 }}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200",
-                  isActive('/notifications')
-                    ? "bg-black text-white shadow-lg"
-                    : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                )}
-              >
-                <Bell className="w-5 h-5" />
-                <span>Notifications</span>
-              </motion.a>
-            </Link>
+            {isValidated && (
+              <Link href="/home/validator/notifications">
+                <motion.a
+                  whileHover={{ x: 4 }}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200",
+                    isActive('/home/validator/notifications')
+                      ? "bg-black text-white shadow-lg"
+                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                  )}
+                >
+                  <Bell className="w-5 h-5" />
+                  <span>Notifications</span>
+                </motion.a>
+              </Link>
+            )}
           </nav>
         </div>
       </div>

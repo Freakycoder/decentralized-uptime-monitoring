@@ -20,7 +20,6 @@ function MyApp({ Component, pageProps }: AppProps) {
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       <AuthProvider>
         <JupiterWalletProvider>
-          <NotificationsProvider>
             <Head>
               <title>Digital Data Contribution Network</title>
               <meta name="description" content="Contribute digital data and earn rewards on Solana" />
@@ -38,7 +37,6 @@ function MyApp({ Component, pageProps }: AppProps) {
                 <Component {...pageProps} />
               )}
             </div>
-          </NotificationsProvider>
         </JupiterWalletProvider>
       </AuthProvider>
     </ThemeProvider>

@@ -10,7 +10,7 @@ impl RedisClientManager {
     pub async fn new() -> RedisResult<Self> {
         println!("Initializing shared redis client manager...");
         let redis_url =
-            std::env::var("REDIS_URL").unwrap_or_else(|_| format!("redis://localost:6379"));
+            std::env::var("REDIS_URL").unwrap_or_else(|_| format!("redis://localhost:6379"));
         println!("Connecting to redis at : {}", redis_url);
         let client = Client::open(redis_url)?;
         let mut conn = client.get_multiplexed_async_connection().await?;

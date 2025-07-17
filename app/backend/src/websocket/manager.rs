@@ -261,20 +261,6 @@ impl WebSocketManager {
                 }
             }
         });
-
-        // Essentially you're spawning (Creating) multiple async tasks, the moment one task fails or completes succesfully we instantly close the other 2 tasks.
-        tokio::select! {
-            _ = receive_task => {
-                println!("Extension recieve task completed (browser closed)")
-            },
-            _ = send_task => {
-                println!("Extension send task completed (browser closed)")
-            },
-            _ = broadcast_task => {
-                println!("Extension broadcast task completed (browser closed)")
-            },
-        }
-
         self.connections.remove(&connection_id);
     }
 

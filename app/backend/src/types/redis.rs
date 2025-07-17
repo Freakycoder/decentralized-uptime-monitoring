@@ -6,13 +6,11 @@ use uuid::Uuid;
 
 use crate::redis::cookie_manager::SessionStore;
 use crate::redis::pubsub_manager::RedisPubSub;
-use crate::websocket::manager::WebSocketManager;
 // App state that includes database and all the classes manager.
 #[derive(Clone)]
 pub struct AppState {
     pub db: sea_orm::DatabaseConnection,
     pub session_store: Arc<SessionStore>,
-    pub ws : Arc<WebSocketManager>,
     pub pubsub : Arc<RedisPubSub>
 }
 

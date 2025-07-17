@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import AppLayout from '../../../components/AppLayout';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useNotifications } from '../../../contexts/NotificationsContext';
+import { useValidatorNotifications } from '../../../hooks/useValidatorNotifications';
 import { formatDate } from '../../../lib/utils';
 import { 
   Bell, 
@@ -22,16 +22,19 @@ const ValidatorNotifications = () => {
   const router = useRouter();
   const { isValidated } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const { 
-    notifications, 
-    markAsRead, 
-    markAllAsRead, 
-    unreadCount, 
-    handleNotificationAction,
-    loading,
-    error 
-  } = useNotifications();
   const [filter, setFilter] = useState<'all' | 'unread' | 'monitoring'>('all');
+  
+  // Use the custom hook for all notification logic
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    error,
+    markAsRead,
+    markAllAsRead,
+    handleNotificationAction,
+    isNotificationRead
+  } = useValidatorNotifications();
 
   useEffect(() => {
     setMounted(true);
@@ -43,7 +46,7 @@ const ValidatorNotifications = () => {
   }, [mounted, isValidated, router]);
 
   const isMonitoringTask = (notification: any) => {
-    return notification.type === 'monitoring' || 
+    return notification.notification_type === 'monitoring' || 
            notification.title.toLowerCase().includes('monitoring task') ||
            notification.message.toLowerCase().includes('website to monitor');
   };
@@ -77,7 +80,7 @@ const ValidatorNotifications = () => {
   };
 
   const filteredNotifications = notifications.filter(notification => {
-    if (filter === 'unread') return !notification.read;
+    if (filter === 'unread') return !isNotificationRead(notification.id);
     if (filter === 'monitoring') return isMonitoringTask(notification);
     return true;
   });
@@ -226,7 +229,7 @@ const ValidatorNotifications = () => {
                 className={`
                   p-6 rounded-2xl border transition-all duration-300 cursor-pointer
                   ${getNotificationBgColor(notification)}
-                  ${!notification.read ? 'shadow-lg' : ''}
+                  ${!isNotificationRead(notification.id) ? 'shadow-lg' : ''}
                 `}
                 onClick={() => markAsRead(notification.id)}
               >
@@ -238,35 +241,35 @@ const ValidatorNotifications = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h4 className={`font-semibold ${!notification.read ? 'text-white' : 'text-white/80'}`}>
+                        <h4 className={`font-semibold ${!isNotificationRead(notification.id) ? 'text-white' : 'text-white/80'}`}>
                           {notification.title}
                         </h4>
-                        <p className={`mt-1 text-sm ${!notification.read ? 'text-white/90' : 'text-white/60'}`}>
+                        <p className={`mt-1 text-sm ${!isNotificationRead(notification.id) ? 'text-white/90' : 'text-white/60'}`}>
                           {notification.message}
                         </p>
                         
-                        {notification.data?.url && (
+                        {notification.website_url && (
                           <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10">
                             <span className="text-xs text-white/60">Website: </span>
                             <span className="text-sm text-blue-400 font-mono">
-                              {notification.data.url}
+                              {notification.website_url}
                             </span>
                           </div>
                         )}
                       </div>
                       
                       <div className="flex items-center space-x-2 ml-4">
-                        {!notification.read && (
+                        {!isNotificationRead(notification.id) && (
                           <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
                         )}
                         <span className="text-xs text-white/40 whitespace-nowrap">
-                          {formatDate(new Date(notification.created_at * 1000).toISOString())}
+                          {formatDate(notification.created_at)}
                         </span>
                       </div>
                     </div>
 
                     {/* Action buttons for monitoring tasks */}
-                    {isMonitoringTask(notification) && !notification.read && (
+                    {isMonitoringTask(notification) && !isNotificationRead(notification.id) && (
                       <div className="flex space-x-2 mt-4">
                         <motion.button
                           whileHover={{ scale: 1.05 }}

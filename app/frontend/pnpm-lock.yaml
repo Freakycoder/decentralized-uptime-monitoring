@@ -62,6 +62,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.1.0(react@19.1.0)
+      shared:
+        specifier: link:../shared
+        version: link:../shared
       tailwind-merge:
         specifier: ^3.2.0
         version: 3.2.0
