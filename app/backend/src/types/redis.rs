@@ -22,3 +22,9 @@ pub struct SessionData {
     pub last_accessed: DateTime<Utc>,
     pub expires_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServerMessage{
+    pub url : String,
+    pub id : String
+}
