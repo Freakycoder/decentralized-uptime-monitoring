@@ -1,4 +1,4 @@
-use crate::{entities::{website_register, validator, notification}, middleware::auth::jwt_auth_middleware, types::websocket::ServerMessage};
+use crate::{entities::{notification, validator, website_register}, middleware::auth::jwt_auth_middleware, types::redis::ServerMessage};
 use crate::types::redis::AppState;
 use axum::{
     extract::State, middleware, routing:: post, Json, Router
