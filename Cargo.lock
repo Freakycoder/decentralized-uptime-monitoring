@@ -620,6 +620,7 @@ dependencies = [
  "redis",
  "reqwest",
  "sea-orm",
+ "sendgrid",
  "serde",
  "serde_json",
  "solana-sdk",
@@ -3504,6 +3505,20 @@ name = "semver"
 version = "1.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56e6fa9c48d24d85fb3de5ad847117517440f6beceb7798af16b4a87d616b8d0"
+
+[[package]]
+name = "sendgrid"
+version = "0.24.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "338e7f7246766f6c931c6eed46e49cf6ef8f7c9b00f272b07822151b762281e9"
+dependencies = [
+ "data-encoding",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.12",
+ "url",
+]
 
 [[package]]
 name = "serde"

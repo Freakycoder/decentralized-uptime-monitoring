@@ -13,7 +13,6 @@ pub mod middleware;
 pub mod routes;
 pub mod types;
 pub mod utils;
-pub mod websocket;
 use crate::{redis::{client::RedisClientManager, cookie_manager::SessionStore, pubsub_manager::RedisPubSub}, types::redis::AppState};
 
 #[tokio::main]

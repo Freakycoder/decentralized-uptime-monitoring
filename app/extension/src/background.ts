@@ -22,7 +22,7 @@ export class BackgroundService {
 
   private monitoredWebsites: Record<string, MonitoredWebsites> = {};
   private readonly INTERVAL = 10 * 60 * 1000;
-  private readonly SERVER_ENDPOINT = 'http://127.0.0.1:3001'
+  private readonly SERVER_ENDPOINT = 'http://localhost:3001'
 
   constructor() {
     this.setupMessageListener();
@@ -37,17 +37,13 @@ export class BackgroundService {
       else if (message.action === 'PERF_DATA' && message.url && message.data) {
         // Get performance data from content script
 
-        const validator_data_str = localStorage.get('validator_connection_data');
-        const validator_data = JSON.parse(validator_data_str);
-        const validator_id = validator_data.validatorId;
+        const validator_id = localStorage.getItem('validatorId');
         const perfData = message.data.pingData[message.url] as PerformanceData;
 
         const payload = {
           website_id: perfData.website_id,
           validator_id,
           timestamp: new Date().toISOString(),
-          runNumber: message.runNumber,
-          totalRuns: message.totalRuns,
           dnsLookup: perfData.dnsLookup,
           tcpConnection: perfData.tcpConnection,
           tlsHandshake: perfData.tlsHandshake,

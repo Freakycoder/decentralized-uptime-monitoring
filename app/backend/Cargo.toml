@@ -29,3 +29,4 @@ cookie = "0.18.1"
 redis = {version = "0.32.3" , features = ["tokio-comp", "json"]}
 axum-extra = { version = "0.10.1", features = ["cookie"] }
 async-trait = "0.1"
+sendgrid = "0.24.1"

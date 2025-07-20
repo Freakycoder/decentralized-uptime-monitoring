@@ -54,6 +54,4 @@ impl RedisQueue {
             None => Ok(None)
         }
     }
-
-    
 }

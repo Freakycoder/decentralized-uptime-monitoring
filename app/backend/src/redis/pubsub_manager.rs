@@ -1,4 +1,4 @@
-use crate::types::websocket::ServerMessage;
+use crate::types::redis::ServerMessage;
 use futures_util::{Stream, StreamExt};
 use redis::{AsyncCommands, Client};
 
