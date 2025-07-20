@@ -28,3 +28,26 @@ pub struct ServerMessage{
     pub url : String,
     pub id : String
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceQueueMessage{
+    pub id : String,
+    pub validator_id : String,
+    pub website_id : String,
+    pub session_id : String,
+    pub run_number : u32,
+    pub total_runs : Option<u32>,
+    pub timestamp : chrono::DateTime<chrono::Utc>,
+    pub data : PerformanceData
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceData{
+    pub dns_lookup: Option<f64>,
+    pub tcp_connection: Option<f64>,
+    pub tls_handshake: Option<f64>,
+    pub ttfb: Option<f64>,
+    pub content_download: Option<f64>,
+    pub total_duration: f64,
+    pub status_code: u32,
+}
