@@ -26,10 +26,11 @@ export class BackgroundService {
 
   constructor() {
     this.setupMessageListener();
+    this.resumeStoredSessions();
   }
 
   private setupMessageListener() {
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
       if (message.action === 'MONITOR_URL' && message.url) {
         this.startMonitoring(message.url)
         sendResponse({ success: true })
@@ -37,29 +38,34 @@ export class BackgroundService {
       else if (message.action === 'PERF_DATA' && message.url && message.data) {
         // Get performance data from content script
 
-        const validator_id = localStorage.getItem('validatorId');
+        const result = await chrome.storage.local.get(['validatorId']);
+        const validator_id = result.validatorId;
         const perfData = message.data.pingData[message.url] as PerformanceData;
 
         const payload = {
           website_id: perfData.website_id,
           validator_id,
-          timestamp: new Date().toISOString(),
-          dnsLookup: perfData.dnsLookup,
-          tcpConnection: perfData.tcpConnection,
-          tlsHandshake: perfData.tlsHandshake,
-          ttfb: perfData.ttfb,
-          contentDownload: perfData.contentDownload,
-          totalDuration: perfData.totalDuration,
-          statusCode: perfData.statusCode,
-
-          // Background script metadata
-          extensionSessionId: this.generateSessionId(),
-          checkCount: this.monitoredWebsites[new URL(message.url).origin]?.checkCount || 0
+          timestamp : Date.now(),
+          data : {
+            dnsLookup: perfData.dnsLookup,
+            tcpConnection: perfData.tcpConnection,
+            tlsHandshake: perfData.tlsHandshake,
+            ttfb: perfData.ttfb,
+            contentDownload: perfData.contentDownload,
+            totalDuration: perfData.totalDuration,
+            statusCode: perfData.statusCode
+          }
         }
 
         try {
-          axios.post(`${this.SERVER_ENDPOINT}/ws/upgrade`, payload)
+          const response = await axios.post(`${this.SERVER_ENDPOINT}/queue/publish`, payload)
           console.log("Performance data sent to server:", payload)
+          
+          if (response.data.success){
+            await this.storeSessionInfo(message.url, message.runNumber, message.totalRuns, perfData.website_id);
+          }
+          console.log('failed to publish to queue from server');
+          return
         }
         catch (err) {
           console.error("Failed to send performance data:", err)
@@ -111,8 +117,61 @@ export class BackgroundService {
     console.log(`started monitoring : ${url}`)
   }
 
-  private generateSessionId(): string {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  private async storeSessionInfo(url: string, runNumber: number, totalRuns: number, websiteId: string) {
+    const sessionKey = `monitoring_session_${new URL(url).origin}`;
+    const sessionData = {
+      url,
+      websiteId,
+      currentRun: runNumber,
+      totalRuns,
+      lastUpdate: Date.now(),
+      status: runNumber >= totalRuns ? 'completed' : 'active'
+    };
+
+    await chrome.storage.local.set({ [sessionKey]: sessionData });
+    console.log(`Session stored for ${url}, run ${runNumber}/${totalRuns}`);
+
+    // Clean up completed sessions
+    if (runNumber >= totalRuns) {
+      setTimeout(async () => {
+        await chrome.storage.local.remove(sessionKey);
+        console.log(`Cleaned up completed session for ${url}`);
+      }, 5000); // Clean up after 5 seconds
+    }
+  }
+
+  private async resumeStoredSessions() {
+    try {
+      const storage = await chrome.storage.local.get();
+      const sessionKeys = Object.keys(storage).filter(key => key.startsWith('monitoring_session_'));
+
+      for (const sessionKey of sessionKeys) {
+        const sessionData = storage[sessionKey];
+        if (sessionData.status === 'active' && sessionData.currentRun < sessionData.totalRuns) {
+          const remainingRuns = sessionData.totalRuns - sessionData.currentRun;
+          console.log(`Resuming session for ${sessionData.url}: ${remainingRuns} runs remaining`);
+
+          // Resume monitoring from where we left off
+          chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs[0]) {
+              chrome.tabs.sendMessage(tabs[0].id!, {
+                type: 'RESUME_MONITORING',
+                url: sessionData.url,
+                websiteId: sessionData.websiteId,
+                sessionId: sessionKey,
+                startFromRun: sessionData.currentRun + 1,
+                totalRuns: sessionData.totalRuns
+              });
+            }
+          });
+        } else if (sessionData.status === 'completed') {
+          // Clean up old completed sessions
+          await chrome.storage.local.remove(sessionKey);
+        }
+      }
+    } catch (error) {
+      console.error('Error resuming stored sessions:', error);
+    }
   }
 }
 
