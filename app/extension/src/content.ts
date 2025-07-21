@@ -21,7 +21,6 @@ const activeMonitoringSessions = new Map<string, {
 }>();
 
 const INTERVAL = 10 * 60 * 1000;
-const TOTAL_RUNS = 8;
 let currentRun = 0;
 
 window.addEventListener('message', async (event) => {
@@ -49,22 +48,43 @@ console.log('🎧 Content script received message:', event.data);
     }
 })
 
+// Listen for resume monitoring messages from background script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'RESUME_MONITORING') {
+        const { url, websiteId, sessionId, startFromRun, totalRuns } = message;
+        console.log(`Resuming monitoring for ${url} from run ${startFromRun}/${totalRuns}`);
+
+        activeMonitoringSessions.set(sessionId, {
+            totalRuns: totalRuns,
+            currentRun: startFromRun - 1
+        });
+
+        // Resume monitoring from the specified run
+        startTimedMonitoring(url, websiteId, sessionId, startFromRun - 1, totalRuns);
+        
+        sendResponse({ success: true });
+    }
+    return true;
+});
+
 function startTimedMonitoring(url: string, websiteId: string, sessionId: string, runNumber: number, totalRuns: number) {
-    currentRun = 0;
+    currentRun = runNumber;
     chrome.storage.local.set({ [url]: { status: "Active", startedAt: Date.now(), sessionId } })
-    console.log(`Starting timed monitoring for ${url} - ${TOTAL_RUNS} runs over ${(TOTAL_RUNS * INTERVAL) / 60000} minutes`);
+    console.log(`Starting timed monitoring for ${url} - ${totalRuns - runNumber} runs remaining over ${((totalRuns - runNumber) * INTERVAL) / 60000} minutes`);
 
     for (let i = runNumber; i < totalRuns; i++) {
+        const delay = runNumber === 0 ? i * INTERVAL : (i - runNumber) * INTERVAL; // Adjust delay for resumed sessions
         setTimeout(async () => {
             currentRun = i + 1;
-            console.log(`Running ping ${currentRun} of ${TOTAL_RUNS} for ${url}`);
+            console.log(`Running ping ${currentRun} of ${totalRuns} for ${url}`);
             await triggerRequestAndSend(url, websiteId, sessionId, currentRun, totalRuns);
-        }, i * INTERVAL);
+        }, delay);
     }
+    const finalDelay = runNumber === 0 ? totalRuns * INTERVAL + 5000 : (totalRuns - runNumber) * INTERVAL + 5000;
     setTimeout(() => {
         chrome.storage.local.set({ [url]: { status: "Completed", startedAt: Date.now() } })
         console.log('Monitoring completed for:', url);
-    }, TOTAL_RUNS * INTERVAL + 5000); // 5 secs buffer
+    }, finalDelay); // 5 secs buffer
 }
 
 async function triggerRequestAndSend(url: string, websiteId: string, sessionId: string, runNumber: number, totalRuns: number) {
@@ -190,8 +210,8 @@ async function triggerRequestAndSend(url: string, websiteId: string, sessionId: 
             url,
             runNumber,
             totalRuns,
-            success: true,
-            statusCode: 404,
+            success: false,
+            statusCode: 0,
             responseTime: 0,
             timestamp: Date.now()
         }, '*');
