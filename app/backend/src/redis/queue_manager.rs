@@ -9,9 +9,9 @@ pub struct RedisQueue {
 
 impl RedisQueue {
     pub fn new(redis_client: Client) -> Self {
-        println!("Initialziing redis queue manager...");
+        println!("Initializing redis queue manager...");
         Self {
-            redis_client: redis_client,
+            redis_client,
         }
     }
 
@@ -34,7 +34,7 @@ impl RedisQueue {
         Ok(queue_length)
     }
 
-    pub async fn dequeue_perfomace_data(&self, queue_name: &str) -> RedisResult<Option<PerformanceQueueMessage>>{
+    pub async fn dequeue_performance_data(&self, queue_name: &str) -> RedisResult<Option<PerformanceQueueMessage>>{
         let mut conn = self.redis_client.get_multiplexed_async_connection().await?;
         let result : Option<String> = conn.rpop(queue_name, None).await?;
 
